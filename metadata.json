@@ -1,0 +1,6 @@
+{
+  "name": "FitPlan MX",
+  "description": "App Fitness + Health Tracking + Nutrition + Workout + Preventive Wellness",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
