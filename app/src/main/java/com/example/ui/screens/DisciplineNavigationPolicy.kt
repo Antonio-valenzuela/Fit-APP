@@ -53,6 +53,7 @@ object DisciplineNavigationPolicy {
                 BottomNavItem("Carrera", Destinations.ACTIVE_RUN, Icons.AutoMirrored.Filled.DirectionsRun),
                 BottomNavItem("Historial", Destinations.RUNNING_HISTORY, Icons.Default.CalendarMonth),
                 BottomNavItem("Progreso", Destinations.PROGRESS, Icons.AutoMirrored.Filled.ShowChart),
+                BottomNavItem("Musculos", Destinations.MUSCLE_MAP, Icons.Default.AccessibilityNew),
                 BottomNavItem("Perfil", Destinations.PROFILE, Icons.Default.Person)
             )
             UserDiscipline.CYCLING -> listOf(
@@ -60,6 +61,7 @@ object DisciplineNavigationPolicy {
                 BottomNavItem("Rodada", Destinations.ACTIVE_RIDE, Icons.AutoMirrored.Filled.DirectionsBike),
                 BottomNavItem("Historial", Destinations.CYCLING_HISTORY, Icons.Default.CalendarMonth),
                 BottomNavItem("Progreso", Destinations.PROGRESS, Icons.AutoMirrored.Filled.ShowChart),
+                BottomNavItem("Musculos", Destinations.MUSCLE_MAP, Icons.Default.AccessibilityNew),
                 BottomNavItem("Perfil", Destinations.PROFILE, Icons.Default.Person)
             )
             UserDiscipline.WALKING -> listOf(
@@ -67,6 +69,7 @@ object DisciplineNavigationPolicy {
                 BottomNavItem("Caminata", Destinations.ACTIVE_WALK, Icons.AutoMirrored.Filled.DirectionsWalk),
                 BottomNavItem("Historial", Destinations.WALKING_HISTORY, Icons.Default.CalendarMonth),
                 BottomNavItem("Progreso", Destinations.PROGRESS, Icons.AutoMirrored.Filled.ShowChart),
+                BottomNavItem("Musculos", Destinations.MUSCLE_MAP, Icons.Default.AccessibilityNew),
                 BottomNavItem("Perfil", Destinations.PROFILE, Icons.Default.Person)
             )
             UserDiscipline.WELLNESS -> listOf(
@@ -74,6 +77,7 @@ object DisciplineNavigationPolicy {
                 BottomNavItem("Diario", Destinations.WELLNESS_DIARY, Icons.Default.MonitorHeart, setOf(Destinations.WELLNESS_DIARY, Destinations.HEALTH)),
                 BottomNavItem("Habitos", Destinations.DAILY_CHECK_IN, Icons.Default.SelfImprovement),
                 BottomNavItem("Resumen", Destinations.PROGRESS, Icons.AutoMirrored.Filled.ShowChart),
+                BottomNavItem("Musculos", Destinations.MUSCLE_MAP, Icons.Default.AccessibilityNew),
                 BottomNavItem("Perfil", Destinations.PROFILE, Icons.Default.Person)
             )
             UserDiscipline.HYBRID -> listOf(
@@ -81,6 +85,7 @@ object DisciplineNavigationPolicy {
                 BottomNavItem("Plan", Destinations.DAILY_PLAN, Icons.Default.CalendarMonth),
                 BottomNavItem("Fuerza", Destinations.WORKOUT, Icons.Default.FitnessCenter),
                 BottomNavItem("Cardio", Destinations.ACTIVE_RUN, Icons.Default.AddCircle, setOf(Destinations.ACTIVE_RUN, Destinations.ACTIVE_RIDE)),
+                BottomNavItem("Musculos", Destinations.MUSCLE_MAP, Icons.Default.AccessibilityNew),
                 BottomNavItem("Bienestar", Destinations.WELLNESS_DIARY, Icons.Default.MonitorHeart, setOf(Destinations.WELLNESS_DIARY, Destinations.HEALTH))
             )
         }

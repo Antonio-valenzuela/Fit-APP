@@ -31,6 +31,7 @@ import com.example.data.model.FeatureSettings
 import com.example.data.model.HybridPlanSettings
 import com.example.data.model.AppPerformanceMode
 import com.example.data.model.PerformanceUserPreferences
+import com.example.data.model.PremiumAccessPolicy
 import com.example.data.model.VisualPerformanceProfile
 import com.example.data.repository.FitPlanRepository
 import com.example.data.repository.PerformanceSettingsRepository
@@ -69,7 +70,12 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     private val _isOnboardingCompleted = MutableStateFlow(prefs.isOnboardingCompleted())
     val isOnboardingCompleted: StateFlow<Boolean> = _isOnboardingCompleted.asStateFlow()
 
-    private val _isPremiumActive = MutableStateFlow(prefs.isPremiumUnlocked())
+    private val _isPremiumActive = MutableStateFlow(
+        PremiumAccessPolicy.isPremiumActive(
+            storedPremiumUnlocked = prefs.isPremiumUnlocked(),
+            isDebugBuild = BuildConfig.DEBUG
+        )
+    )
     val isPremiumActive: StateFlow<Boolean> = _isPremiumActive.asStateFlow()
 
     private val _useMetric = MutableStateFlow(prefs.useMetricSettings())
@@ -275,7 +281,10 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                 targetCarbsG = targetCarbs,
                 targetFatG = targetFat,
                 disclaimerAccepted = disclaimerAccepted,
-                isPremium = prefs.isPremiumUnlocked(),
+                isPremium = PremiumAccessPolicy.isPremiumActive(
+                    storedPremiumUnlocked = prefs.isPremiumUnlocked(),
+                    isDebugBuild = BuildConfig.DEBUG
+                ),
                 trainingDiscipline = UserDiscipline.fromStoredName(trainingDiscipline).name
             )
 
@@ -945,17 +954,19 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     // Local premium toggle is available only in debug builds.
     fun patchPremiumAccess(enabled: Boolean) {
         viewModelScope.launch {
-            if (!BuildConfig.DEBUG) {
-                prefs.setPremiumUnlocked(false)
-                _isPremiumActive.value = false
-                repository.getUserDirectly()?.let { repository.saveUser(it.copy(isPremium = false)) }
-                return@launch
-            }
-            prefs.setPremiumUnlocked(enabled)
-            _isPremiumActive.value = enabled
+            val storedPremium = PremiumAccessPolicy.storedPremiumFromLocalPatch(
+                enabled = enabled,
+                isDebugBuild = BuildConfig.DEBUG
+            )
+            prefs.setPremiumUnlocked(storedPremium)
+            val effectivePremium = PremiumAccessPolicy.isPremiumActive(
+                storedPremiumUnlocked = storedPremium,
+                isDebugBuild = BuildConfig.DEBUG
+            )
+            _isPremiumActive.value = effectivePremium
             val current = repository.getUserDirectly()
             if (current != null) {
-                repository.saveUser(current.copy(isPremium = enabled))
+                repository.saveUser(current.copy(isPremium = effectivePremium))
             }
         }
     }
@@ -963,9 +974,13 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     fun setPremiumEntitlementFromBilling(enabled: Boolean) {
         viewModelScope.launch {
             prefs.setPremiumUnlocked(enabled)
-            _isPremiumActive.value = enabled
+            val effectivePremium = PremiumAccessPolicy.isPremiumActive(
+                storedPremiumUnlocked = enabled,
+                isDebugBuild = BuildConfig.DEBUG
+            )
+            _isPremiumActive.value = effectivePremium
             repository.getUserDirectly()?.let { current ->
-                repository.saveUser(current.copy(isPremium = enabled))
+                repository.saveUser(current.copy(isPremium = effectivePremium))
             }
         }
     }
@@ -1042,7 +1057,10 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
             refreshPerformanceState()
             _isLoggedIn.value = false
             _isOnboardingCompleted.value = false
-            _isPremiumActive.value = false
+            _isPremiumActive.value = PremiumAccessPolicy.isPremiumActive(
+                storedPremiumUnlocked = false,
+                isDebugBuild = BuildConfig.DEBUG
+            )
             _preventiveAlerts.value = null
             _habitsAdvice.value = null
         }

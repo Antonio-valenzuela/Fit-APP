@@ -19,6 +19,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.features.gym.ui.GymViewModel
 import com.example.BuildConfig
 import com.example.data.model.UserDiscipline
 import com.example.ui.theme.GoldenAmber
@@ -119,7 +121,10 @@ fun FitPlanAppContent(
         composable(Destinations.ONBOARDING) { OnboardingScreen(viewModel, ::navigate) }
         composable(Destinations.DASHBOARD) { DashboardScreen(viewModel, ::navigate) }
         composable(Destinations.NUTRITION) { NutritionScreen(viewModel, ::navigate) }
-        composable(Destinations.WORKOUT) { WorkoutScreen(viewModel, ::navigate) }
+        composable(Destinations.WORKOUT) {
+            val gymViewModel: GymViewModel = hiltViewModel()
+            WorkoutScreen(gymViewModel, ::navigate)
+        }
         composable(Destinations.HEALTH) { HealthScreen(viewModel, ::navigate) }
         composable(Destinations.PROGRESS) { ProgressScreen(viewModel, ::navigate) }
         composable(Destinations.MUSCLE_MAP) {
@@ -188,14 +193,14 @@ fun FitPlanBottomBar(
     val isDark = LocalThemeIsDark.current
     val items = remember(discipline) { DisciplineNavigationPolicy.bottomItemsFor(discipline) }
     NavigationBar(
-        containerColor = if (isDark) Color(0xD90F172A) else Color(0xD9FDFCFF),
+        containerColor = Color(0xF20D0D0D),
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        if (isDark) Color(0x33FFFFFF) else Color(0x1F000000),
+                        Color(0x3300C27B),
                         Color.Transparent
                     )
                 ),

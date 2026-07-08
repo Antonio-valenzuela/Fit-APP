@@ -212,42 +212,63 @@ class ActivityTrackerViewModel(application: Application) : AndroidViewModel(appl
 
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
-            .setMinUpdateIntervalMillis(1000L)
-            .setMinUpdateDistanceMeters(3f)
-            .build()
-        locationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+        try {
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000L)
+                .setMinUpdateIntervalMillis(1000L)
+                .setMinUpdateDistanceMeters(3f)
+                .build()
+            locationClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+        } catch (e: SecurityException) {
+            _state.value = _state.value.copy(
+                status = TrackerStatus.ERROR,
+                message = "Permiso de ubicación revocado: ${e.message}"
+            )
+        }
     }
 
     @SuppressLint("MissingPermission")
     private fun requestInitialLocation(addToRoute: Boolean) {
-        locationClient.lastLocation
-            .addOnSuccessListener { location ->
-                if (location != null && isFreshLocation(location)) {
-                    acceptLocationPoint(location.toGpsRoutePoint(), addToRoute = addToRoute)
-                } else {
+        try {
+            locationClient.lastLocation
+                .addOnSuccessListener { location ->
+                    if (location != null && isFreshLocation(location)) {
+                        acceptLocationPoint(location.toGpsRoutePoint(), addToRoute = addToRoute)
+                    } else {
+                        requestCurrentLocation(addToRoute)
+                    }
+                }
+                .addOnFailureListener {
                     requestCurrentLocation(addToRoute)
                 }
-            }
-            .addOnFailureListener {
-                requestCurrentLocation(addToRoute)
-            }
+        } catch (e: SecurityException) {
+            _state.value = _state.value.copy(
+                status = TrackerStatus.ERROR,
+                message = "Permiso de ubicación revocado: ${e.message}"
+            )
+        }
     }
 
     @SuppressLint("MissingPermission")
     private fun requestCurrentLocation(addToRoute: Boolean) {
-        val cancellationToken = CancellationTokenSource()
-        locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationToken.token)
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    acceptLocationPoint(location.toGpsRoutePoint(), addToRoute = addToRoute)
-                } else {
-                    _state.value = _state.value.copy(status = TrackerStatus.SEARCHING_GPS, message = "Buscando senal GPS...")
+        try {
+            val cancellationToken = CancellationTokenSource()
+            locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationToken.token)
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        acceptLocationPoint(location.toGpsRoutePoint(), addToRoute = addToRoute)
+                    } else {
+                        _state.value = _state.value.copy(status = TrackerStatus.SEARCHING_GPS, message = "Buscando senal GPS...")
+                    }
                 }
-            }
-            .addOnFailureListener {
-                _state.value = _state.value.copy(status = TrackerStatus.ERROR, message = "Activa la ubicacion del dispositivo para iniciar.")
-            }
+                .addOnFailureListener {
+                    _state.value = _state.value.copy(status = TrackerStatus.ERROR, message = "Activa la ubicacion del dispositivo para iniciar.")
+                }
+        } catch (e: SecurityException) {
+            _state.value = _state.value.copy(
+                status = TrackerStatus.ERROR,
+                message = "Permiso de ubicación revocado: ${e.message}"
+            )
+        }
     }
 
     private fun acceptLocationPoint(point: GpsRoutePoint, addToRoute: Boolean) {

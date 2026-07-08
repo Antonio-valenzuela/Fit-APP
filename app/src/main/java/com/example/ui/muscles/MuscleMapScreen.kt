@@ -39,7 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.data.model.BodyModel
 import com.example.data.model.Muscle
 import com.example.data.model.MuscleImbalance
@@ -61,7 +61,7 @@ fun MuscleMapScreen(
     onNavigate: (String) -> Unit,
     isPremium: Boolean,
     discipline: UserDiscipline = MuscleMapNavigationDefaults.defaultDiscipline,
-    viewModel: MuscleMapViewModel = viewModel()
+    viewModel: MuscleMapViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isDark = LocalThemeIsDark.current
@@ -132,12 +132,12 @@ fun MuscleMapScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.58f)
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
                     )
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         BodyHeatMapCanvas(
                             bodyModel = state.selectedBodyModel,

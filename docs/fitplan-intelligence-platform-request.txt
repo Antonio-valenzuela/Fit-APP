@@ -1,0 +1,334 @@
+Actúa como Senior Android Engineer, Product Manager, UX/UI Designer, Backend Architect y experto en apps fitness local-first.
+
+Estoy trabajando en FitPlan MX, una app Android fitness desarrollada con Kotlin, Jetpack Compose, Room y MapLibre/OpenFreeMap. La app ya tiene módulos de entrenamiento, running/cycling con GPS, nutrición básica, agua, peso, salud básica, mapa muscular, balance muscular, rachas, logros, PDF e integración inicial con IA.
+
+Quiero que revises TODO el proyecto actual antes de modificar código. No asumas que algo no existe: inspecciona carpetas, entidades Room, ViewModels, navegación, pantallas, repositorios, servicios, componentes Compose, tema visual, lógica premium, lógica de IA, módulos GPS y persistencia local.
+
+OBJETIVO GENERAL:
+Convertir FitPlan MX en una app fitness más seria, práctica, inteligente y vendible como proyecto de alta complejidad para portafolio. No quiero solo más pantallas. Quiero arquitectura real, inteligencia local, monitoreo, sincronización, offline-first, seguridad, GPS robusto y una interfaz más simple.
+
+IMPORTANTE:
+La interfaz actual me parece saturada, con demasiada información de golpe y poca practicidad. Rediseña la experiencia para que sea más limpia, directa y útil. También quiero quitar/desactivar temporalmente todo bloqueo premium mientras hago pruebas. Después lo volveré a activar.
+
+ALCANCE DE ESTA IMPLEMENTACIÓN:
+
+1. Convertir FitPlan MX en una “Fitness Intelligence Platform”
+   Reorganiza la app para que no se sienta como una app simple de rutinas, sino como una plataforma inteligente de entrenamiento, salud y rendimiento.
+
+Debe quedar claro en arquitectura y producto que FitPlan:
+
+* Registra entrenamiento, salud, nutrición y actividad.
+* Analiza datos locales.
+* Genera recomendaciones prácticas.
+* Funciona offline.
+* Puede sincronizar después.
+* Tiene preparación para backend/IA sin depender siempre de internet.
+
+No agregues complejidad visual innecesaria. La inteligencia debe sentirse útil, no abrumadora.
+
+2. Crear Health & Activity Monitor
+   Implementa un motor local que revise el estado del usuario con base en sus datos recientes.
+
+Debe analizar:
+
+* Último entrenamiento.
+* Último registro de agua.
+* Última comida o nutrición.
+* Último peso.
+* Último registro de sueño si existe; si no existe, prepara el modelo para integrarlo.
+* Última sesión GPS.
+* Músculos trabajados recientemente.
+* Músculos descuidados.
+* Riesgo simple de sobreentrenamiento.
+* Falta de actividad.
+* Datos incompletos.
+
+Debe devolver un estado práctico, por ejemplo:
+
+* “Todo bien”
+* “Falta registrar comida”
+* “Hidratación baja”
+* “Entrenaste pierna recientemente”
+* “Hoy conviene sesión ligera”
+* “No hay suficientes datos todavía”
+
+Evita mensajes técnicos como “provider failed”, “sync error”, “fallback”, “Room error”, etc.
+
+3. Implementar Readiness Score
+   Agrega un Readiness Score local de 0 a 100 que indique qué tan listo está el usuario para entrenar hoy.
+
+Debe calcularse con datos disponibles:
+
+* Entrenamiento reciente.
+* Intensidad o volumen si existe.
+* Hidratación.
+* Sueño si existe.
+* Estado de ánimo/fatiga si existe.
+* Días de descanso.
+* Músculos trabajados.
+* Frecuencia semanal.
+* Datos incompletos.
+
+Si faltan datos, no debe fallar. Debe mostrar algo como:
+“Necesitamos más registros para mejorar tu recomendación, pero por ahora puedes hacer una sesión moderada.”
+
+Categorías:
+
+* 80-100: listo para entrenar fuerte.
+* 60-79: entrenamiento normal/moderado.
+* 40-59: sesión ligera recomendada.
+* 0-39: descanso, movilidad o caminata.
+
+El score debe ser entendible para el usuario, con explicación corta y accionable.
+
+5. Preparar backend opcional, workers y arquitectura escalable
+   No quiero que rompas la app local-first. Pero sí quiero dejar preparada la arquitectura para sincronización futura con backend.
+
+Crea o mejora una capa de arquitectura con:
+
+* SyncRepository o SyncManager.
+* Estados de sincronización.
+* Modelos preparados para serverId, syncStatus, version, updatedAt, deletedAt y lastSyncedAt.
+* Interfaces para futura API remota.
+* Workers locales con WorkManager si aplica.
+* Jobs locales para recalcular métricas, readiness, reportes o sincronización pendiente.
+
+Si ya existe algo parecido, refactorízalo sin duplicar.
+
+No implementes un backend completo si el proyecto no lo tiene, pero deja la app preparada para conectarse después a:
+
+* API REST.
+* PostgreSQL.
+* Redis/BullMQ.
+* Workers externos.
+* IA en backend.
+
+9. Mejorar GPS para running/cycling/walking
+   Revisa la implementación actual de GPS y mejórala para que sea más robusta.
+
+Debe incluir:
+
+* Filtro de precisión GPS.
+* Descarte de puntos con mala accuracy.
+* Auto-pause si el usuario se detiene.
+* Cálculo más confiable de distancia.
+* Pace/velocidad usando puntos válidos.
+* Estado de calidad de señal GPS.
+* Indicador simple para el usuario.
+* Manejo de permisos.
+* Manejo de ubicación inicial débil.
+* Historial de rutas si ya existe.
+* Preparación para exportar GPX si no existe.
+* Modo walking si todavía no está bien integrado.
+
+La interfaz no debe saturarse. Solo muestra lo importante durante la actividad:
+
+* Tiempo.
+* Distancia.
+* Ritmo o velocidad.
+* Estado GPS.
+* Botón pausar/finalizar.
+
+Detalles avanzados deben ir en el resumen posterior, no en la pantalla principal.
+
+12. Implementar Sync Engine local-first
+    Quiero que FitPlan funcione como una app offline-first seria.
+
+Agrega o mejora en entidades importantes:
+
+* id local.
+* serverId opcional.
+* userId si aplica.
+* createdAt.
+* updatedAt.
+* deletedAt para soft delete.
+* syncStatus.
+* version.
+* lastSyncedAt.
+
+Estados sugeridos:
+
+* SYNCED
+* PENDING_CREATE
+* PENDING_UPDATE
+* PENDING_DELETE
+* FAILED
+* CONFLICT
+
+Debe existir un lugar donde la app pueda saber:
+
+* Cuántos registros están pendientes.
+* Si la última sincronización fue exitosa.
+* Si hay errores.
+* Si hay conflictos.
+
+Pero en la UI de usuario normal no muestres información técnica. En su lugar:
+“Tus datos están guardados en este dispositivo.”
+“Se sincronizarán cuando haya conexión.”
+“No pudimos actualizar ahora, pero tus registros están seguros.”
+
+13. Mejorar modo offline
+    La app debe poder usarse sin internet.
+
+Debe funcionar offline para:
+
+* Registrar entrenamiento.
+* Registrar agua.
+* Registrar peso.
+* Registrar comida/nutrición básica.
+* Registrar salud básica.
+* Guardar sesión GPS.
+* Ver historial.
+* Ver rutina del día.
+* Ver recomendaciones locales básicas.
+* Calcular readiness score.
+* Guardar cambios pendientes para sincronización futura.
+
+Agrega un indicador discreto de estado offline/online, pero no invasivo.
+
+No bloquees funciones principales por falta de internet.
+
+14. Mejorar seguridad y privacidad
+    Revisa el proyecto buscando malas prácticas.
+
+Corrige o documenta:
+
+* API keys embebidas.
+* Uso inseguro de secretos.
+* Logs con datos sensibles.
+* Exposición innecesaria de datos de salud.
+* Manejo de permisos.
+* Manejo de errores.
+* Texto que parezca diagnóstico médico.
+
+Si hay integración con IA, no debe exponer llaves directamente en cliente para producción. Si por ahora se usa en pruebas, deja claro con comentarios y arquitectura que debe moverse a backend.
+
+Agrega mensajes de privacidad claros:
+
+* FitPlan no sustituye a un médico.
+* Los datos se guardan localmente si no hay cuenta/sync.
+* El usuario controla sus registros.
+* No mostrar recomendaciones como diagnóstico.
+
+15. Mejorar lenguaje de producto
+    Reemplaza mensajes técnicos por lenguaje humano.
+
+No mostrar:
+
+* “fallback local”
+* “provider unavailable”
+* “backend error”
+* “sync failed”
+* “Room migration error”
+* “GPS provider timeout”
+* “LLM error”
+
+Mostrar:
+
+* “No pudimos actualizar tu información por ahora.”
+* “Tus registros siguen guardados en tu celular.”
+* “La señal GPS está débil.”
+* “Necesitamos más datos para darte una recomendación más precisa.”
+* “Hoy conviene una sesión ligera.”
+* “Tu progreso se actualizará cuando vuelvas a tener conexión.”
+
+REDISEÑO DE INTERFAZ:
+La app actualmente se siente cargada. Quiero una UI más práctica, limpia y rápida.
+
+Rediseña el dashboard principal con este enfoque:
+
+* Menos tarjetas visibles al mismo tiempo.
+* Máximo 3 acciones principales.
+* Información progresiva: primero resumen, luego detalle.
+* Nada de saturar con métricas avanzadas al inicio.
+* Priorizar “qué hago hoy”.
+* Diseño más tipo coach personal.
+
+Dashboard recomendado:
+
+1. Tarjeta principal: “Plan de hoy”
+
+   * Recomendación breve.
+   * Readiness Score.
+   * Acción principal: “Iniciar entrenamiento”.
+2. Tarjeta secundaria: “Estado rápido”
+
+   * Agua.
+   * Último entrenamiento.
+   * Músculo pendiente.
+3. Accesos rápidos:
+
+   * Registrar comida.
+   * Registrar peso.
+   * Iniciar caminata/carrera.
+
+El resto debe ir en secciones separadas:
+
+* Progreso.
+* Historial.
+* Nutrición.
+* Salud.
+* Reportes.
+* Ajustes.
+
+No quiero una pantalla llena de datos desde el inicio.
+
+DESACTIVAR PREMIUM TEMPORALMENTE:
+Quita o desactiva temporalmente todos los bloqueos premium/paywall mientras hago pruebas.
+
+Condiciones:
+
+* No borres toda la arquitectura premium si ya existe.
+* No elimines código importante de RevenueCat, flags o planes si ya está integrado.
+* Crea una bandera centralizada tipo:
+  PREMIUM_ENABLED = false
+  o
+  FORCE_UNLOCK_ALL_FEATURES_FOR_TESTING = true
+
+Mientras esté en modo pruebas:
+
+* Todas las funciones deben estar desbloqueadas.
+* No debe aparecer paywall obligatorio.
+* No debe bloquear reportes, IA, rutinas, GPS, nutrición, estadísticas ni funciones avanzadas.
+* Puede quedar una nota interna o TODO para reactivar premium después.
+* La UI no debe insistir en comprar premium durante pruebas.
+
+ENTREGABLES:
+Al finalizar, necesito:
+
+1. Resumen de cambios implementados.
+2. Archivos modificados.
+3. Nuevas entidades/modelos creados.
+4. Nuevos ViewModels/Repositorios/Managers.
+5. Cambios en UI.
+6. Cómo se calcula el Readiness Score.
+7. Cómo funciona el Health & Activity Monitor.
+8. Cómo queda el modo offline.
+9. Cómo se desactivó premium temporalmente.
+10. Riesgos o pendientes.
+11. Comandos ejecutados para validar.
+
+VALIDACIÓN:
+Ejecuta, si aplica:
+
+* ./gradlew test
+* ./gradlew lint
+* ./gradlew assembleDebug
+* flutter analyze solo si el proyecto realmente fuera Flutter, pero primero confirma el stack real.
+* Revisa errores de compilación.
+* No dejes imports rotos.
+* No dejes pantallas inaccesibles.
+* No rompas navegación existente.
+
+REGLAS IMPORTANTES:
+
+* No hagas cambios ciegos.
+* No dupliques módulos si ya existen.
+* No metas 20 pantallas nuevas sin necesidad.
+* Prioriza arquitectura + practicidad.
+* Mantén la app usable para pruebas.
+* Si algo no puede completarse por falta de estructura existente, deja implementación parcial limpia y documentada.
+* Todo debe quedar en lenguaje entendible para usuario final.
+* El resultado debe sentirse como una app fitness práctica, no como un panel técnico saturado.
+
+Primero inspecciona el proyecto, identifica la arquitectura actual y después implementa los cambios de forma incremental.

@@ -14,7 +14,9 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.FitPlanAppContent
 import com.example.ui.theme.FitPlanTheme
 import com.example.ui.viewmodel.FitPlanViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,8 +31,8 @@ class MainActivity : ComponentActivity() {
             val useDarkTheme = remember(themeSelector, systemDark) {
                 when (themeSelector) {
                     "dark" -> true
-                    "light" -> false
-                    else -> systemDark
+                    "light" -> true
+                    else -> true
                 }
             }
 

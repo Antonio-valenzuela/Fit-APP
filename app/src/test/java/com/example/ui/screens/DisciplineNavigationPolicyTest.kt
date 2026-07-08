@@ -40,4 +40,16 @@ class DisciplineNavigationPolicyTest {
         assertTrue(cardioItem.selectedRoutes.contains(Destinations.ACTIVE_RUN))
         assertTrue(cardioItem.selectedRoutes.contains(Destinations.ACTIVE_RIDE))
     }
+
+    @Test
+    fun everyDisciplineKeepsMuscleMapVisible() {
+        UserDiscipline.entries.forEach { discipline ->
+            val routes = DisciplineNavigationPolicy.bottomItemsFor(discipline).map { it.route }
+
+            assertTrue(
+                "Expected muscle map in bottom navigation for $discipline",
+                routes.contains(Destinations.MUSCLE_MAP)
+            )
+        }
+    }
 }

@@ -22,11 +22,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.analytics.ProductAnalytics
 import com.example.data.model.ActivitySessionSummaryRules
+import com.example.data.model.DashboardTodaySummary
+import com.example.data.model.DashboardTodaySummaryRules
 import com.example.data.model.LocalRecommendationRules
 import com.example.data.model.LocalRecommendation
+import com.example.data.model.PremiumAccessPolicy
 import com.example.data.model.UserDiscipline
 import com.example.data.model.VisualPerformanceProfile
 import com.example.ui.components.AdaptiveDashboardRules
@@ -55,8 +59,8 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val settings by viewModel.featureSettings.collectAsStateWithLifecycle()
     val detectedProfile by viewModel.visualPerformanceProfile.collectAsStateWithLifecycle()
     val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
-    val premiumAvailable = true
-    val effectiveIsPremium = premiumAvailable && isPremium
+    val premiumAvailable = PremiumAccessPolicy.PREMIUM_ENABLED
+    val effectiveIsPremium = isPremium
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
     val activitySessions by viewModel.allActivitySessions.collectAsStateWithLifecycle()
     val workouts by viewModel.allWorkoutLogs.collectAsStateWithLifecycle()
@@ -66,13 +70,9 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val disciplineSessions = remember(activitySessions, discipline) {
         activitySessions.filter { it.discipline == discipline.name }
     }
-    val disciplineSummary = remember(disciplineSessions) {
-        ActivitySessionSummaryRules.summarize(disciplineSessions)
-    }
-    val muscleMapViewModel: MuscleMapViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val muscleMapViewModel: MuscleMapViewModel = hiltViewModel()
     val muscleState by muscleMapViewModel.state.collectAsStateWithLifecycle()
     val isDark = LocalThemeIsDark.current
-    val screenInfo = LocalScreenInfo.current
     val profile = remember(detectedProfile, settings.animationsEnabled, settings.chartsEnabled) {
         detectedProfile.copy(
             animationsEnabled = detectedProfile.animationsEnabled && settings.animationsEnabled,
@@ -81,15 +81,14 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             advancedChartsEnabled = detectedProfile.advancedChartsEnabled && settings.chartsEnabled
         )
     }
-    val performanceMode = profile.useLightweightCards
     val dashboardSettings = remember(settings, effectiveIsPremium, premiumAvailable) {
         settings.copy(
             aiRecommendationsEnabled = effectiveIsPremium,
-            premiumEnabled = premiumAvailable && !effectiveIsPremium
+            premiumEnabled = PremiumAccessPolicy.shouldShowPremiumEntryPoint(
+                isPremiumActive = effectiveIsPremium,
+                premiumEnabled = premiumAvailable
+            )
         )
-    }
-    val recentHealthLogsFlow = remember(profile.maxHistoryItems) {
-        viewModel.getRecentHealthLogs(profile.maxHistoryItems)
     }
 
     // Only collect and observe data if its modular features are enabled
@@ -101,9 +100,10 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         viewModel.todayHealthLogs.collectAsStateWithLifecycle().value
     } else emptyList()
 
-    val allHealthLogs = if (AdaptiveDashboardRules.shouldLoadProgressHistory(dashboardSettings)) {
-        recentHealthLogsFlow.collectAsStateWithLifecycle(initialValue = emptyList()).value
+    val allHealthLogs = if (AdaptiveDashboardRules.shouldLoadTodayHealth(dashboardSettings)) {
+        viewModel.allHealthLogs.collectAsStateWithLifecycle().value
     } else emptyList()
+
     val localRecommendations = remember(discipline, user?.goal, workouts, activitySessions, todayHealth, todayMeals, muscleState.recommendation?.muscle) {
         LocalRecommendationRules.build(
             discipline = discipline,
@@ -115,41 +115,17 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             muscleSuggestion = muscleState.recommendation?.muscle
         )
     }
-
-    // Aggregations on demand (Safe & Lightweight compute)
-    val todayWater = todayHealth.sumOf { it.waterIntakeMl }
-    val lastGlucoseLog = todayHealth.firstOrNull { it.glucoseLevel > 0 }
-    val lastBPLog = todayHealth.firstOrNull { it.systolicPressure > 0 }
-    val widgetManifest = remember(user, effectiveIsPremium, todayMeals, todayHealth, allHealthLogs, profile) {
-        DashboardWidgetManifestResolver.resolve(
-            user = user,
-            isPremium = effectiveIsPremium,
-            todayMeals = todayMeals,
-            todayHealth = todayHealth,
-            recentHealth = allHealthLogs,
-            profile = profile
+    val dashboardSummary = remember(localRecommendations, todayHealth, todayMeals, allHealthLogs, workouts, activitySessions, muscleState.recommendation?.muscle, discipline) {
+        DashboardTodaySummaryRules.build(
+            recommendation = localRecommendations.first(),
+            todayHealthLogs = todayHealth,
+            todayFoodLogs = todayMeals,
+            allHealthLogs = allHealthLogs,
+            workouts = workouts,
+            activitySessions = activitySessions,
+            recommendedMuscle = muscleState.recommendation?.muscle,
+            discipline = discipline
         )
-    }
-
-    fun widgetState(id: DashboardWidgetId): WidgetState {
-        return DashboardWidgetManifestResolver.stateOf(widgetManifest, id)
-    }
-
-    fun shouldRenderWidget(id: DashboardWidgetId): Boolean {
-        return widgetState(id).shouldRenderWidget()
-    }
-
-    LaunchedEffect(widgetManifest) {
-        ProductAnalytics.track(
-            "home_rendered",
-            mapOf(
-                "widgets" to widgetManifest.count { it.shouldRender }.toString(),
-                "locked" to widgetManifest.count { it.state == WidgetState.LOCKED }.toString()
-            )
-        )
-        widgetManifest.filter { it.shouldRender }.forEach {
-            ProductAnalytics.track("widget_seen", mapOf("widget_id" to it.id.name, "state" to it.state.name))
-        }
     }
 
     Scaffold(
@@ -194,7 +170,7 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     )
                 }
 
-                if (premiumAvailable) {
+                if (PremiumAccessPolicy.shouldShowPremiumEntryPoint(effectiveIsPremium, premiumAvailable)) {
                     IconButton(onClick = { onNavigate(Destinations.PREMIUM) }) {
                         Icon(
                             imageVector = Icons.Default.Stars,
@@ -206,279 +182,36 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                 }
             }
 
-            val hasGamificationWidgets = shouldRenderWidget(DashboardWidgetId.GAMIFICATION)
-            val hasAnyMainWidget = widgetManifest.any { it.shouldRender }
-            val dashboardWidgetLimit = AdaptiveDashboardRules.dashboardWidgetLimit(profile)
-            var dashboardWidgetCount = 0
-            fun canShowDashboardWidget(): Boolean {
-                if (dashboardWidgetCount >= dashboardWidgetLimit) return false
-                dashboardWidgetCount += 1
-                return true
-            }
-
-            // Central Dynamic Grid Layout supporting compact vertical list or large double column tablet wide layout
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 item {
-                    DisciplineHeroCard(
-                        discipline = discipline,
-                        summary = disciplineSummary,
-                        onPrimaryAction = { onNavigate(DisciplineNavigationPolicy.primaryActionRouteFor(discipline)) },
-                        onChange = { onNavigate(Destinations.SETTINGS) }
+                    TodayPlanCoachCard(
+                        summary = dashboardSummary,
+                        onPrimaryAction = {
+                            onNavigate(dashboardDestinationForRouteHint(dashboardSummary.primaryRouteHint))
+                        }
                     )
                 }
 
                 item {
-                    LocalRecommendationCard(
-                        recommendation = localRecommendations.first(),
-                        onAction = {
-                            onNavigate(
-                                when (localRecommendations.first().routeHint) {
-                                    "active_run" -> Destinations.ACTIVE_RUN
-                                    "active_ride" -> Destinations.ACTIVE_RIDE
-                                    "wellness_diary" -> Destinations.WELLNESS_DIARY
-                                    "daily_plan" -> Destinations.DAILY_PLAN
-                                    "nutrition" -> Destinations.NUTRITION
-                                    "health" -> Destinations.HEALTH
-                                    else -> Destinations.WORKOUT
-                                }
-                            )
-                        }
+                    QuickStatusCard(
+                        summary = dashboardSummary,
+                        onHealth = { onNavigate(Destinations.HEALTH) },
+                        onNutrition = { onNavigate(Destinations.NUTRITION) },
+                        onWorkout = { onNavigate(Destinations.WORKOUT) },
+                        onMuscle = { onNavigate(Destinations.MUSCLE_MAP) }
                     )
                 }
 
-                when (discipline) {
-                    UserDiscipline.RUNNING, UserDiscipline.CYCLING, UserDiscipline.WALKING -> {
-                        item {
-                            CardioDisciplineDashboardCard(
-                                discipline = discipline,
-                                sessions = disciplineSessions,
-                                onStart = { onNavigate(DisciplineNavigationPolicy.primaryActionRouteFor(discipline)) },
-                                onHistory = {
-                                    onNavigate(
-                                        when (discipline) {
-                                            UserDiscipline.RUNNING -> Destinations.RUNNING_HISTORY
-                                            UserDiscipline.WALKING -> Destinations.WALKING_HISTORY
-                                            else -> Destinations.CYCLING_HISTORY
-                                        }
-                                    )
-                                }
-                            )
-                        }
-                    }
-                    UserDiscipline.WELLNESS -> {
-                        item {
-                            WellnessDisciplineDashboardCard(
-                                todayWater = todayWater,
-                                entryCount = todayHealth.size,
-                                onDiary = { onNavigate(Destinations.WELLNESS_DIARY) },
-                                onCheckIn = { onNavigate(Destinations.DAILY_CHECK_IN) }
-                            )
-                        }
-                    }
-                    UserDiscipline.HYBRID -> {
-                        item {
-                            HybridDisciplineDashboardCard(
-                                onPlan = { onNavigate(Destinations.DAILY_PLAN) },
-                                onRun = { onNavigate(Destinations.ACTIVE_RUN) },
-                                onRide = { onNavigate(Destinations.ACTIVE_RIDE) },
-                                onWellness = { onNavigate(Destinations.WELLNESS_DIARY) }
-                            )
-                        }
-                    }
-                    UserDiscipline.GYM -> Unit
-                }
-
-                if (discipline == UserDiscipline.GYM || discipline == UserDiscipline.HYBRID) {
-                    item {
-                        TodayActionStrip(
-                            settings = dashboardSettings,
-                            profile = profile,
-                            onNavigate = onNavigate
-                        )
-                    }
-
-                    item {
-                        DashboardMuscleBalanceCard(
-                            recommendedMuscle = muscleState.recommendation?.muscle,
-                            reason = muscleState.recommendation?.reason,
-                            hasData = muscleState.hasWorkoutData,
-                            onBalance = { onNavigate(Destinations.MUSCLE_MAP) },
-                            onTrain = { onNavigate(Destinations.WORKOUT) }
-                        )
-                    }
-                }
-                
-                if (hasGamificationWidgets && canShowDashboardWidget()) item {
-                    GamificationProgressWidgets(
+                item {
+                    DashboardQuickAccessCard(
                         settings = dashboardSettings,
-                        profile = profile,
+                        discipline = discipline,
                         onNavigate = onNavigate
                     )
-                }
-
-                if (!hasAnyMainWidget) {
-                    item {
-                        DashboardEmptyState(onNavigate = onNavigate)
-                    }
-                }
-
-                // MULTI-COLUMN TABLET HANDLING
-                if (screenInfo.isTabletOrWider) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                if (shouldRenderWidget(DashboardWidgetId.NUTRITION) && canShowDashboardWidget()) {
-                                    NutritionSummaryWidget(
-                                        totalMeals = todayMeals,
-                                        targetCals = user?.targetCalories ?: 2000,
-                                        targetP = user?.targetProteinG ?: 140,
-                                        targetC = user?.targetCarbsG ?: 220,
-                                        targetF = user?.targetFatG ?: 65,
-                                        performanceMode = performanceMode,
-                                        profile = profile,
-                                        onNavigate = onNavigate
-                                    )
-                                }
-
-                                if (shouldRenderWidget(DashboardWidgetId.HEALTH) && canShowDashboardWidget()) {
-                                    HealthSummaryWidget(
-                                        todayWater = todayWater,
-                                        lastBPLog = lastBPLog?.let { "${it.systolicPressure}/${it.diastolicPressure}" },
-                                        lastGlucoseLog = lastGlucoseLog?.let { "${it.glucoseLevel} mg/dL" },
-                                        performanceMode = performanceMode,
-                                        profile = profile,
-                                        onNavigate = onNavigate
-                                    )
-                                }
-
-                                if (premiumAvailable && shouldRenderWidget(DashboardWidgetId.AI_COACH) && canShowDashboardWidget()) {
-                                    AIRecommendationWidget(
-                                        isPremium = effectiveIsPremium,
-                                        performanceMode = performanceMode,
-                                        profile = profile,
-                                        onNavigate = onNavigate,
-                                        onDisableAI = { onNavigate(Destinations.PROFILE) }
-                                    )
-                                }
-                            }
-
-                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                if (shouldRenderWidget(DashboardWidgetId.WORKOUT) && canShowDashboardWidget()) {
-                                    WorkoutTodayWidget(
-                                        performanceMode = performanceMode,
-                                        profile = profile,
-                                        onNavigate = onNavigate,
-                                        onStartWorkout = { onNavigate(Destinations.WORKOUT) }
-                                    )
-                                }
-
-                                if (shouldRenderWidget(DashboardWidgetId.PROGRESS) && canShowDashboardWidget()) {
-                                    ProgressSummaryWidget(
-                                        allHealthLogs = allHealthLogs,
-                                        chartsEnabled = AdaptiveDashboardRules.shouldRenderCharts(profile, dashboardSettings),
-                                        performanceMode = performanceMode,
-                                        profile = profile,
-                                        healthEnabled = true,
-                                        onNavigate = onNavigate
-                                    )
-                                }
-
-                                if (premiumAvailable && shouldRenderWidget(DashboardWidgetId.PREMIUM) && !effectiveIsPremium && canShowDashboardWidget()) {
-                                    PremiumBenefitsWidget(
-                                        profile = profile,
-                                        onNavigate = onNavigate
-                                    )
-                                }
-
-                                SettingsShortcutCard(onNavigate = onNavigate)
-                            }
-                        }
-                    }
-                } else {
-                    // COMPACT PORTRAIT LAYOUT
-                    if (shouldRenderWidget(DashboardWidgetId.NUTRITION) && canShowDashboardWidget()) {
-                        item {
-                            NutritionSummaryWidget(
-                                totalMeals = todayMeals,
-                                targetCals = user?.targetCalories ?: 2000,
-                                targetP = user?.targetProteinG ?: 140,
-                                targetC = user?.targetCarbsG ?: 220,
-                                targetF = user?.targetFatG ?: 65,
-                                performanceMode = performanceMode,
-                                profile = profile,
-                                onNavigate = onNavigate
-                            )
-                        }
-                    }
-
-                    if (shouldRenderWidget(DashboardWidgetId.WORKOUT) && canShowDashboardWidget()) {
-                        item {
-                            WorkoutTodayWidget(
-                                performanceMode = performanceMode,
-                                profile = profile,
-                                onNavigate = onNavigate,
-                                onStartWorkout = { onNavigate(Destinations.WORKOUT) }
-                            )
-                        }
-                    }
-
-                    if (shouldRenderWidget(DashboardWidgetId.HEALTH) && canShowDashboardWidget()) {
-                        item {
-                            HealthSummaryWidget(
-                                todayWater = todayWater,
-                                lastBPLog = lastBPLog?.let { "${it.systolicPressure}/${it.diastolicPressure}" },
-                                lastGlucoseLog = lastGlucoseLog?.let { "${it.glucoseLevel} mg/dL" },
-                                performanceMode = performanceMode,
-                                profile = profile,
-                                onNavigate = onNavigate
-                            )
-                        }
-                    }
-
-                    if (shouldRenderWidget(DashboardWidgetId.PROGRESS) && canShowDashboardWidget()) {
-                        item {
-                            ProgressSummaryWidget(
-                                allHealthLogs = allHealthLogs,
-                                chartsEnabled = AdaptiveDashboardRules.shouldRenderCharts(profile, dashboardSettings),
-                                performanceMode = performanceMode,
-                                profile = profile,
-                                healthEnabled = true,
-                                onNavigate = onNavigate
-                            )
-                        }
-                    }
-
-                    if (premiumAvailable && shouldRenderWidget(DashboardWidgetId.AI_COACH) && canShowDashboardWidget()) {
-                        item {
-                            AIRecommendationWidget(
-                                isPremium = effectiveIsPremium,
-                                performanceMode = performanceMode,
-                                profile = profile,
-                                onNavigate = onNavigate,
-                                onDisableAI = { onNavigate(Destinations.PROFILE) }
-                            )
-                        }
-                    }
-
-                    if (premiumAvailable && shouldRenderWidget(DashboardWidgetId.PREMIUM) && !effectiveIsPremium && canShowDashboardWidget()) {
-                        item {
-                            PremiumBenefitsWidget(
-                                profile = profile,
-                                onNavigate = onNavigate
-                            )
-                        }
-                    }
-
-                    item {
-                        SettingsShortcutCard(onNavigate = onNavigate)
-                    }
                 }
             }
         }
@@ -488,6 +221,236 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 // ==========================================
 // INDEPENDENT STANDALONE WIDGET COMPONENTS
 // ==========================================
+
+@Composable
+private fun TodayPlanCoachCard(
+    summary: DashboardTodaySummary,
+    onPrimaryAction: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Plan de hoy",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = summary.planTitle,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = summary.planMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = summary.readinessLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = summary.readinessMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Button(
+                onClick = onPrimaryAction,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(summary.primaryActionLabel, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickStatusCard(
+    summary: DashboardTodaySummary,
+    onHealth: () -> Unit,
+    onNutrition: () -> Unit,
+    onWorkout: () -> Unit,
+    onMuscle: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Estado rapido",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            QuickStatusLine(
+                icon = Icons.Default.LocalDrink,
+                label = "Agua",
+                value = summary.waterStatus,
+                onClick = onHealth
+            )
+            QuickStatusLine(
+                icon = Icons.Default.RestaurantMenu,
+                label = "Comida",
+                value = summary.foodStatus,
+                onClick = onNutrition
+            )
+            QuickStatusLine(
+                icon = Icons.Default.FitnessCenter,
+                label = "Entrenamiento",
+                value = summary.lastTrainingStatus,
+                onClick = onWorkout
+            )
+            QuickStatusLine(
+                icon = Icons.Default.AccessibilityNew,
+                label = "Musculo",
+                value = summary.muscleStatus,
+                onClick = onMuscle
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickStatusLine(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardQuickAccessCard(
+    settings: com.example.data.model.FeatureSettings,
+    discipline: UserDiscipline,
+    onNavigate: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Accesos rapidos",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            DashboardQuickAction(
+                label = "Registrar comida",
+                icon = Icons.Default.RestaurantMenu,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    onNavigate(if (settings.nutritionEnabled) Destinations.NUTRITION else Destinations.SETTINGS)
+                }
+            )
+            DashboardQuickAction(
+                label = "Registrar peso",
+                icon = Icons.Default.Favorite,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    onNavigate(if (settings.healthEnabled) Destinations.HEALTH else Destinations.SETTINGS)
+                }
+            )
+            DashboardQuickAction(
+                label = dashboardActivityActionLabel(discipline),
+                icon = Icons.Default.DirectionsRun,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onNavigate(DisciplineNavigationPolicy.primaryActionRouteFor(discipline)) }
+            )
+        }
+    }
+}
+
+private fun dashboardDestinationForRouteHint(routeHint: String): String = when (routeHint) {
+    "active_run" -> Destinations.ACTIVE_RUN
+    "active_ride" -> Destinations.ACTIVE_RIDE
+    "active_walk" -> Destinations.ACTIVE_WALK
+    "wellness_diary" -> Destinations.WELLNESS_DIARY
+    "daily_plan" -> Destinations.DAILY_PLAN
+    "nutrition" -> Destinations.NUTRITION
+    "health" -> Destinations.HEALTH
+    else -> Destinations.WORKOUT
+}
+
+private fun dashboardActivityActionLabel(discipline: UserDiscipline): String = when (discipline) {
+    UserDiscipline.RUNNING -> "Iniciar carrera"
+    UserDiscipline.CYCLING -> "Iniciar rodada"
+    UserDiscipline.WALKING -> "Iniciar caminata"
+    UserDiscipline.WELLNESS -> "Abrir diario"
+    else -> "Iniciar caminata"
+}
 
 @Composable
 private fun DashboardMuscleBalanceCard(
