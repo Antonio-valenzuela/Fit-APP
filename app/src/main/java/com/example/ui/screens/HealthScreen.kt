@@ -60,7 +60,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.health.HealthConnectManager
+import java.time.Instant
 import com.example.data.model.HealthLogEntity
 import com.example.data.model.UserDiscipline
 import com.example.data.model.WellnessEntryDraft
@@ -90,6 +100,61 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val todayStart = remember { startOfTodayMillis() }
     val hasWorkoutToday = workouts.any { it.timestamp >= todayStart }
     val summary = WellnessEntryRules.buildTodaySummary(logs, hasWorkoutToday)
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val healthConnectManager = remember { HealthConnectManager(context) }
+    var hasHCSupport by remember { mutableStateOf(healthConnectManager.isHealthConnectAvailable()) }
+    var hasHCPermissions by remember { mutableStateOf(false) }
+    var showConsentDialog by remember { mutableStateOf(false) }
+    var isSyncing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hasHCSupport) {
+        if (hasHCSupport) {
+            hasHCPermissions = healthConnectManager.hasAllPermissions()
+        }
+    }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        if (granted.containsAll(healthConnectManager.requiredPermissions)) {
+            hasHCPermissions = true
+            showConsentDialog = true
+        } else {
+            Toast.makeText(context, "Permisos de Health Connect incompletos o denegados", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    suspend fun syncHealthConnectData() {
+        isSyncing = true
+        try {
+            val now = Instant.now()
+            val startOfToday = Instant.ofEpochMilli(todayStart)
+            val stepsRecords = healthConnectManager.readSteps(startOfToday, now)
+            val totalSteps = stepsRecords.sumOf { it.count }
+
+            if (totalSteps > 0) {
+                viewModel.logHealthMetrics(
+                    glucose = 0f,
+                    preMeal = false,
+                    systolic = 0,
+                    diastolic = 0,
+                    waterMl = 0,
+                    sleepHours = 0f,
+                    sleepQuality = 0,
+                    steps = totalSteps.toInt()
+                )
+                Toast.makeText(context, "Sincronizados $totalSteps pasos de Health Connect", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "No hay nuevos datos en Health Connect", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error en la sincronización: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            isSyncing = false
+        }
+    }
 
     var showEntryDialog by remember { mutableStateOf(false) }
     var choosingType by remember { mutableStateOf(false) }
@@ -182,6 +247,29 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         resetForm()
     }
 
+    if (showConsentDialog) {
+        AlertDialog(
+            onDismissRequest = { showConsentDialog = false },
+            title = { Text("Consentimiento de datos") },
+            text = { Text("¿Consientes compartir tus métricas de Health Connect (pasos y actividad) de forma segura con la IA de FitPlan para análisis preventivo?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConsentDialog = false
+                        scope.launch { syncHealthConnectData() }
+                    }
+                ) {
+                    Text("Aceptar y Sincronizar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConsentDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         modifier = Modifier.frostedMeshBackground(isDark),
@@ -223,6 +311,16 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
             item {
                 TodaySummaryCard(summary = summary, onCreate = ::openCreate)
+            }
+
+            item {
+                HealthConnectSyncCard(
+                    hasSupport = hasHCSupport,
+                    hasPermissions = hasHCPermissions,
+                    isSyncing = isSyncing,
+                    onSyncClick = { showConsentDialog = true },
+                    onRequestPermissions = { requestPermissionLauncher.launch(healthConnectManager.requiredPermissions) }
+                )
             }
 
             item {
@@ -684,4 +782,53 @@ private fun Float.positiveString(): String = if (this > 0f) {
     if (this % 1f == 0f) roundToInt().toString() else toString()
 } else {
     ""
+}
+
+@Composable
+private fun HealthConnectSyncCard(
+    hasSupport: Boolean,
+    hasPermissions: Boolean,
+    isSyncing: Boolean,
+    onSyncClick: () -> Unit,
+    onRequestPermissions: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.MonitorHeart,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Sincronización con Health Connect", fontWeight = FontWeight.Bold)
+                val statusText = when {
+                    !hasSupport -> "No disponible en este dispositivo"
+                    !hasPermissions -> "Requiere configuración de permisos"
+                    isSyncing -> "Sincronizando..."
+                    else -> "Conectado y listo"
+                }
+                Text(statusText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (hasSupport) {
+                if (hasPermissions) {
+                    Button(onClick = onSyncClick, enabled = !isSyncing) {
+                        Text("Sincronizar")
+                    }
+                } else {
+                    OutlinedButton(onClick = onRequestPermissions) {
+                        Text("Configurar")
+                    }
+                }
+            }
+        }
+    }
 }

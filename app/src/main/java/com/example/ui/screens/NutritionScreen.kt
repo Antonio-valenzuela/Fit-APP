@@ -34,6 +34,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,6 +50,7 @@ import com.example.data.model.FoodItemEntity
 import com.example.data.model.FoodValidationResult
 import com.example.data.model.NutritionLabelParser
 import com.example.data.model.ParsedNutritionLabel
+import com.example.data.model.PremiumAccessPolicy
 import com.example.data.ocr.NutritionLabelOcr
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.frostedMeshBackground
@@ -115,7 +117,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val isDark = LocalThemeIsDark.current
     val scope = rememberCoroutineScope()
     val featureGeminiFoodScanEnabled = false
-    val canUseGeminiFoodScan = isPremium && featureGeminiFoodScanEnabled
+    val canUseGeminiFoodScan = PremiumAccessPolicy.canUseGeminiFoodScan(
+        isPremiumActive = isPremium,
+        featureEnabled = featureGeminiFoodScanEnabled,
+        isDebugBuild = BuildConfig.DEBUG
+    )
     fun createFoodPhotoUri(): Uri {
         val dir = File(context.cacheDir, "food_photos").apply { mkdirs() }
         val file = File(dir, "food_${System.currentTimeMillis()}.jpg")
@@ -548,7 +554,10 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         } else {
                             Icon(Icons.Default.PhotoCamera, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Escaneo IA Premium", fontWeight = FontWeight.Bold)
+                            Text(
+                                if (canUseGeminiFoodScan) "Escanear comida con IA" else "Escaneo IA Premium",
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 

@@ -24,12 +24,12 @@ fun Modifier.frostedMeshBackground(isDark: Boolean): Modifier {
     val isLowEnd = LocalIsLowEnd.current
     return this.drawBehind {
         // Fill base background
-        val baseColor = if (isDark) Color(0xFF0D1520) else Color(0xFFF8FAFC)
+        val baseColor = Color(0xFF0D0D0D)
         drawRect(color = baseColor)
 
         if (!isLowEnd) {
-            // Top-left soft ambient blue glow
-            val topLeftColor = if (isDark) Color(0x1a0061A4) else Color(0x0c0061A4)
+            // Top-left soft ambient fitness glow.
+            val topLeftColor = Color(0x2200C27B)
             val topLeftBrush = Brush.radialGradient(
                 colors = listOf(topLeftColor, Color.Transparent),
                 center = Offset(0f, 0f),
@@ -37,8 +37,7 @@ fun Modifier.frostedMeshBackground(isDark: Boolean): Modifier {
             )
             drawRect(brush = topLeftBrush)
 
-            // Bottom-right soft healthcare emerald glow
-            val bottomRightColor = if (isDark) Color(0x1a006C4C) else Color(0x0a006C4C)
+            val bottomRightColor = Color(0x18009660)
             val bottomRightBrush = Brush.radialGradient(
                 colors = listOf(bottomRightColor, Color.Transparent),
                 center = Offset(size.width, size.height),
@@ -72,27 +71,16 @@ fun Modifier.glassCard(
     return shadowModifier
         .clip(RoundedCornerShape(cornerRadius))
         .drawBehind {
-            val cardColor = if (isLowEnd) {
-                if (isDark) Color(0xFF1E293B) else Color(0xFFFFFFFF)
-            } else {
-                if (isDark) Color(0x7F182235) else Color(0xB1FFFFFF) // Opacity controlled
-            }
+            val cardColor = if (isLowEnd) Color(0xFF1A1A1A) else Color(0xE61A1A1A)
             drawRect(color = cardColor)
         }
         .border(
             width = 1.dp,
             brush = Brush.linearGradient(
-                colors = if (isDark) {
-                    listOf(
-                        Color(0x2BFFFFFF), // Transparent highlight
-                        Color(0x05FFFFFF)  // Secondary subtle side
-                    )
-                } else {
-                    listOf(
-                        Color(0x60FFFFFF), // Lucid high opacity white highlight
-                        Color(0x10FFFFFF)  // Faded secondary side
-                    )
-                }
+                colors = listOf(
+                    Color(0x3300C27B),
+                    Color(0x1AFFFFFF)
+                )
             ),
             shape = RoundedCornerShape(cornerRadius)
         )

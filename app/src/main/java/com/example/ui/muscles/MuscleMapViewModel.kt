@@ -1,9 +1,7 @@
 package com.example.ui.muscles
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.local.AppDatabase
 import com.example.data.model.BodyModel
 import com.example.data.model.Muscle
 import com.example.data.model.MuscleBalanceRules.ANTAGONIST_PAIRS
@@ -18,15 +16,19 @@ import com.example.data.model.MuscleTrainingProfiles.GENERAL_TRAINING_PROFILE
 import com.example.data.model.MuscleTrainingProfiles.MOBILITY_PROFILE
 import com.example.data.model.UserEntity
 import com.example.data.model.WorkoutLogEntity
+import com.example.features.musclemap.domain.repository.MuscleMapRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 import kotlin.math.abs
 
 data class MuscleMapUiState(
@@ -40,8 +42,10 @@ data class MuscleMapUiState(
     val hasWorkoutData: Boolean = false
 )
 
-class MuscleMapViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = AppDatabase.getInstance(application)
+@HiltViewModel
+class MuscleMapViewModel @Inject constructor(
+    private val repository: MuscleMapRepository
+) : ViewModel() {
     private val _state = MutableStateFlow(MuscleMapUiState())
     val state: StateFlow<MuscleMapUiState> = _state.asStateFlow()
 
@@ -60,11 +64,18 @@ class MuscleMapViewModel(application: Application) : AndroidViewModel(applicatio
     private fun observeLocalTrainingData() {
         viewModelScope.launch {
             combine(
-                database.workoutDao().getWorkoutLogsFlow(),
-                database.userDao().getUserFlow()
+                repository.getWorkoutLogsFlow(),
+                repository.getUserFlow()
             ) { workouts, user ->
                 buildUiState(workouts, user)
-            }.collect { nextState ->
+            }
+            .catch { e ->
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Error al cargar datos del mapa muscular: ${e.message}"
+                )
+            }
+            .collect { nextState ->
                 _state.value = nextState.copy(
                     selectedMuscle = _state.value.selectedMuscle?.takeIf { nextState.heatmap.containsKey(it) }
                 )

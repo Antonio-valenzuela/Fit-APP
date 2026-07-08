@@ -62,14 +62,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import com.example.data.model.UserDiscipline
 import com.example.data.model.Muscle
 import com.example.ui.muscles.MuscleMapViewModel
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.frostedMeshBackground
-import com.example.ui.viewmodel.FitPlanViewModel
+import com.example.features.gym.ui.GymViewModel
 import com.example.ui.workout.ExerciseCatalogItem
 import com.example.ui.workout.SuggestedRoutine
 import com.example.ui.workout.TrainingCatalog
@@ -77,12 +77,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 @Composable
-fun WorkoutScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
-    val workouts by viewModel.allWorkoutLogs.collectAsStateWithLifecycle()
-    val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
-    val user by viewModel.userProfile.collectAsStateWithLifecycle()
+fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val workouts = state.workouts
+    val isPremium = state.isPremiumActive
+    val user = state.user
     val discipline = remember(user?.trainingDiscipline) { UserDiscipline.fromStoredName(user?.trainingDiscipline) }
-    val muscleViewModel: MuscleMapViewModel = composeViewModel()
+    val muscleViewModel: MuscleMapViewModel = hiltViewModel()
     val muscleState by muscleViewModel.state.collectAsStateWithLifecycle()
 
     var selectedMuscle by remember { mutableStateOf<Muscle?>(null) }
@@ -199,12 +200,15 @@ fun WorkoutScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                 onFinish = ::finishWorkout
             )
         } else {
+            val screenInfo = LocalScreenInfo.current
+            val spacing = screenInfo.standardSpacing
+            val columns = if (screenInfo.screenType == ScreenType.Expanded) 3 else 2
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = spacing),
+                verticalArrangement = Arrangement.spacedBy(spacing)
             ) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -271,12 +275,33 @@ fun WorkoutScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         onObjective = { selectedObjective = it }
                     )
                 }
-                items(filteredRoutines) { routine ->
-                    RoutineCard(
-                        routine = routine,
-                        onPreview = { selectedRoutine = routine },
-                        onStart = { startRoutine(routine) }
-                    )
+
+                if (screenInfo.isTabletOrWider) {
+                    val chunks = filteredRoutines.chunked(columns)
+                    items(chunks) { rowRoutines ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                            rowRoutines.forEach { routine ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    RoutineCard(
+                                        routine = routine,
+                                        onPreview = { selectedRoutine = routine },
+                                        onStart = { startRoutine(routine) }
+                                    )
+                                }
+                            }
+                            repeat(columns - rowRoutines.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                } else {
+                    items(filteredRoutines) { routine ->
+                        RoutineCard(
+                            routine = routine,
+                            onPreview = { selectedRoutine = routine },
+                            onStart = { startRoutine(routine) }
+                        )
+                    }
                 }
 
                 item {
@@ -293,8 +318,24 @@ fun WorkoutScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         EmptyTrainingCard("No hay ejercicios en esta categoria todavia.")
                     }
                 } else {
-                    items(muscleExercises) { exercise ->
-                        ExerciseCard(exercise)
+                    if (screenInfo.isTabletOrWider) {
+                        val chunks = muscleExercises.chunked(columns)
+                        items(chunks) { rowExercises ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                                rowExercises.forEach { exercise ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ExerciseCard(exercise)
+                                    }
+                                }
+                                repeat(columns - rowExercises.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    } else {
+                        items(muscleExercises) { exercise ->
+                            ExerciseCard(exercise)
+                        }
                     }
                 }
 
@@ -310,9 +351,28 @@ fun WorkoutScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         EmptyTrainingCard("Todavia no tienes rutinas guardadas. Puedes iniciar una sugerida o crear una libre.")
                     }
                 } else {
-                    items(workouts.take(6)) { log ->
-                        WorkoutHistoryCard(log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
-                            viewModel.removeWorkoutLog(log)
+                    val historyItems = workouts.take(6)
+                    if (screenInfo.isTabletOrWider) {
+                        val chunks = historyItems.chunked(columns)
+                        items(chunks) { rowHistory ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                                rowHistory.forEach { log ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        WorkoutHistoryCard(log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
+                                            viewModel.removeWorkoutLog(log)
+                                        }
+                                    }
+                                }
+                                repeat(columns - rowHistory.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    } else {
+                        items(historyItems) { log ->
+                            WorkoutHistoryCard(log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
+                                viewModel.removeWorkoutLog(log)
+                            }
                         }
                     }
                 }

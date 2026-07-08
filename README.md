@@ -46,6 +46,10 @@ Las capturas locales usadas durante QA estan en la raiz del proyecto:
 - Android SDK compatible con `compileSdk 36`
 - Emulador o dispositivo fisico
 
+Este workspace usa el JDK local `C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot`
+mediante `org.gradle.java.home` en `gradle.properties`. Si Gradle falla por
+`JAVA_HOME`, verifica que esa carpeta exista o instala JDK 17 en esa ruta.
+
 ## Instalacion local
 
 1. Abre este directorio en Android Studio.
@@ -64,17 +68,28 @@ Comandos utiles:
 
 Para release firmado, consulta `docs/release-signing.md`.
 
-## Variables de entorno
+## Variables de entorno y Seguridad
 
-No subas claves reales al repositorio.
+No subas claves reales al repositorio. Para proteger la API Key de Gemini y evitar que sea extraíble del APK, la aplicación móvil utiliza un **backend proxy Express** local/remoto.
 
+### Configuración del Backend Proxy (.env)
+En el servidor o entorno local, crea un archivo `.env` con:
 ```env
-GEMINI_API_KEY=MY_GEMINI_API_KEY
+PORT=3000
+GEMINI_API_KEY=YOUR_REAL_GEMINI_API_KEY
+BACKEND_API_KEY=fitplan_secret_key_123
+GEMINI_TIMEOUT_MS=60000
+```
+> [!IMPORTANT]
+> **Rotación de Claves:** Por seguridad, la API Key de Gemini debe rotarse periódicamente de manera manual en la **Consola de Google Cloud Platform (GCP)**. No compartas ni almacenes esta clave en el código Android.
+
+### Configuración de la App Android (.env de Android)
+La app móvil se comunica con el proxy y se autentica usando la API key del backend:
+```env
+BACKEND_API_KEY=fitplan_secret_key_123
 GOOGLE_WEB_CLIENT_ID=MY_GOOGLE_WEB_CLIENT_ID
 PREMIUM_SUBSCRIPTION_ID=fitplan_premium_monthly
 ```
-
-- `GEMINI_API_KEY`: habilita consejos preventivos y analisis de fotos de comida. Si no esta configurada, la app usa recomendaciones locales donde aplica.
 - `GOOGLE_WEB_CLIENT_ID`: habilita Google Sign-In.
 - `PREMIUM_SUBSCRIPTION_ID`: debe coincidir con un producto/subscripcion configurado en Play Console.
 

@@ -36,17 +36,25 @@ class GeminiService {
         .build()
 
     private val mediaType = "application/json; charset=utf-8".toMediaType()
-    private val generateContentUrl =
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+    private val baseUrl: String = BuildConfig.BACKEND_BASE_URL.trim().removeSuffix("/")
+
+    init {
+        if (!BuildConfig.DEBUG && !baseUrl.startsWith("https://", ignoreCase = true)) {
+            throw IllegalStateException("HTTPS is mandatory in production for API Base URL: $baseUrl")
+        }
+    }
+
+    private val backendUrlChat = "$baseUrl/api/gemini/chat"
+    private val backendUrlVision = "$baseUrl/api/gemini/vision"
 
     suspend fun getPreventiveAdvice(
         user: UserEntity,
         recentVitals: List<HealthLogEntity>,
         requestType: String
     ): String = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY" || apiKey.contains("placeholder", ignoreCase = true)) {
-            Log.w("GeminiService", "Gemini API key no configurada. Usando FitCore AI local.")
+        val backendKey = BuildConfig.BACKEND_API_KEY
+        if (backendKey.isEmpty() || backendKey == "YOUR_BACKEND_API_KEY_HERE" || backendKey.contains("placeholder", ignoreCase = true)) {
+            Log.w("GeminiService", "Backend API key no configurada. Usando FitCore AI local.")
             return@withContext FitCoreAiEngine.generateOfflineAdvice(user, recentVitals, requestType)
         }
 
@@ -63,14 +71,14 @@ class GeminiService {
 
         try {
             val request = Request.Builder()
-                .url(generateContentUrl)
-                .addHeader("X-goog-api-key", apiKey)
+                .url(backendUrlChat)
+                .addHeader("Authorization", "Bearer $backendKey")
                 .post(jsonRequest.toString().toRequestBody(mediaType))
                 .build()
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    Log.e("GeminiService", "Gemini API response failed: ${response.code}")
+                    Log.e("GeminiService", "Proxy API response failed: ${response.code}")
                     return@withContext FitCoreAiEngine.generateOfflineAdvice(user, recentVitals, requestType)
                 }
 
@@ -87,12 +95,12 @@ class GeminiService {
                         .getString("text")
                         .trim()
                 }.getOrElse {
-                    Log.e("GeminiService", "Gemini response parse error: ${it.message}", it)
+                    Log.e("GeminiService", "Proxy response parse error: ${it.message}", it)
                     FitCoreAiEngine.generateOfflineAdvice(user, recentVitals, requestType)
                 }
             }
         } catch (e: Exception) {
-            Log.e("GeminiService", "Gemini API call error: ${e.message}", e)
+            Log.e("GeminiService", "Proxy API call error: ${e.message}", e)
             FitCoreAiEngine.generateOfflineAdvice(user, recentVitals, requestType)
         }
     }
@@ -101,10 +109,10 @@ class GeminiService {
         imageBytes: ByteArray,
         mimeType: String = "image/jpeg"
     ): Result<FoodImageEstimate> = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY" || apiKey.contains("placeholder", ignoreCase = true)) {
+        val backendKey = BuildConfig.BACKEND_API_KEY
+        if (backendKey.isEmpty() || backendKey == "YOUR_BACKEND_API_KEY_HERE" || backendKey.contains("placeholder", ignoreCase = true)) {
             return@withContext Result.failure(
-                IllegalStateException("Configura GEMINI_API_KEY para analizar fotos de comida.")
+                IllegalStateException("Configura BACKEND_API_KEY para analizar fotos de comida.")
             )
         }
 
@@ -154,8 +162,8 @@ class GeminiService {
 
         try {
             val request = Request.Builder()
-                .url(generateContentUrl)
-                .addHeader("X-goog-api-key", apiKey)
+                .url(backendUrlVision)
+                .addHeader("Authorization", "Bearer $backendKey")
                 .post(jsonRequest.toString().toRequestBody(mediaType))
                 .build()
 
@@ -207,7 +215,7 @@ class GeminiService {
             Result.failure(IllegalStateException("Gemini tardo demasiado en analizar la foto. Intenta de nuevo con buena luz o una foto mas clara."))
         } catch (error: Exception) {
             Log.e("GeminiService", "Food image estimate error: ${error.message}", error)
-            Result.failure(error)
+            Result.failure(IllegalStateException("No se pudo analizar la comida. Revisa tu conexión o intenta de nuevo."))
         }
     }
 

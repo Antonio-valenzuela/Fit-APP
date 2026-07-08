@@ -1,0 +1,16 @@
+{
+  "name": "fitplan-backend",
+  "version": "1.0.0",
+  "description": "FitPlan MX backend proxy",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.credentials.exceptions.GetCredentialException
 import com.example.BuildConfig
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -58,6 +59,8 @@ class GoogleAuthManager(private val context: Context) {
             } else {
                 Result.failure(IllegalStateException("La credencial de Google no fue reconocida."))
             }
+        } catch (error: NoCredentialException) {
+            Result.failure(IllegalStateException("No se encontraron cuentas de Google en este dispositivo. Por favor, inicia sesión manualmente.", error))
         } catch (error: GetCredentialException) {
             Result.failure(error)
         } catch (error: Exception) {
