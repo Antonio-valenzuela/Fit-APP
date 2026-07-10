@@ -6,12 +6,12 @@ import org.junit.Test
 
 class FitPlanThemeColorTest {
     @Test
-    fun usesDarkFitnessGreenPalette() {
-        assertEquals(Color(0xFF00C27B), PrimaryDark)
-        assertEquals(Color(0xFF00C27B), PrimaryLight)
-        assertEquals(Color(0xFF0D0D0D), BackgroundDark)
-        assertEquals(Color(0xFF0D0D0D), BackgroundLight)
-        assertEquals(Color(0xFF1A1A1A), SurfaceDark)
-        assertEquals(Color(0xFF1A1A1A), SurfaceLight)
+    fun usesApprovedIndigoPaletteForLightAndDarkThemes() {
+        assertEquals(Color(0xFF6C5DD3), PrimaryDark)
+        assertEquals(Color(0xFF4361EE), PrimaryLight)
+        assertEquals(Color(0xFF0B0C10), BackgroundDark)
+        assertEquals(Color(0xFFF8F9FD), BackgroundLight)
+        assertEquals(Color(0xFF161720), SurfaceDark)
+        assertEquals(Color(0xFFFFFFFF), SurfaceLight)
     }
 }
