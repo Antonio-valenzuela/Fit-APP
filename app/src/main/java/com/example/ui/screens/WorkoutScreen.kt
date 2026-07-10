@@ -194,9 +194,12 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                 onLoadChange = { loadStr = it },
                 onRpeChange = { rpeStr = it },
                 onCompleteSet = {
-                    val exercise = TrainingCatalog.exerciseById(activeRoutine!!.exerciseIds[activeExerciseIndex])
+                    val exerciseIds = activeRoutine!!.exerciseIds
+                    // Guard against IndexOutOfBoundsException if index is somehow out of range
+                    if (activeExerciseIndex >= exerciseIds.size) return@ActiveWorkoutContent
+                    val exercise = TrainingCatalog.exerciseById(exerciseIds[activeExerciseIndex])
                     val targetSets = exercise?.suggestedSets ?: 3
-                    if (completedSets + 1 >= targetSets && activeExerciseIndex < activeRoutine!!.exerciseIds.lastIndex) {
+                    if (completedSets + 1 >= targetSets && activeExerciseIndex < exerciseIds.lastIndex) {
                         activeExerciseIndex++
                         completedSets = 0
                     } else {
@@ -258,8 +261,8 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                             title = workouts.first().routineName,
                             onStart = {
                                 val match = TrainingCatalog.routines.firstOrNull { it.name == workouts.first().routineName }
-                                    ?: TrainingCatalog.routines.first()
-                                startRoutine(match)
+                                    ?: TrainingCatalog.routines.firstOrNull()
+                                match?.let { startRoutine(it) }
                             }
                         )
                     }

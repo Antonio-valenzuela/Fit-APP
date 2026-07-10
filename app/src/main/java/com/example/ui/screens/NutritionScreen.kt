@@ -98,11 +98,15 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     var capturedPreview by remember { mutableStateOf<Bitmap?>(null) }
     var lastPreparedImage by remember { mutableStateOf<PreparedFoodImage?>(null) }
     var pendingGeminiImage by remember { mutableStateOf<PreparedFoodImage?>(null) }
+    // Job references to cancel in-flight Gemini/OCR coroutines and prevent duplicate calls
+    var geminiJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var ocrJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var showGeminiConsentDialog by remember { mutableStateOf(false) }
     var geminiConsentChecked by remember { mutableStateOf(false) }
     var showGeminiPremiumDialog by remember { mutableStateOf(false) }
 
-    val todayStart = remember { nutritionStartOfTodayMillis() }
+    val todayDateKey = remember { com.example.data.repository.LocalDateUtils.getTodayString() }
+    val todayStart = remember(todayDateKey) { nutritionStartOfTodayMillis() }
     val todayWorkouts = remember(workouts, todayStart) { workouts.filter { it.timestamp >= todayStart } }
     val todaySessions = remember(sessions, todayStart) { sessions.filter { it.timestamp >= todayStart } }
     val balance = remember(legacyItems, entries, todayWorkouts, todaySessions, todayHealth) {
@@ -135,9 +139,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     }
 
     fun analyzePreparedImage(prepared: PreparedFoodImage) {
+        // Cancel any in-flight Gemini request before starting a new one
+        geminiJob?.cancel()
         aiLoading = true
         aiStatus = "Analizando comida con Gemini... puede tardar unos segundos."
-        scope.launch {
+        geminiJob = scope.launch {
             val result = viewModel.estimateMealFromPhoto(prepared.bytes, "image/jpeg")
             aiLoading = false
             result
@@ -147,7 +153,8 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     proteinStr = estimate.proteinG.takeIf { it > 0f }?.cleanMacro() ?: ""
                     carbsStr = estimate.carbsG.takeIf { it > 0f }?.cleanMacro() ?: ""
                     fatStr = estimate.fatG.takeIf { it > 0f }?.cleanMacro() ?: ""
-                    selectedPortion = "Porción"
+                    // Use "Porcion" (no accent) to match FoodDiaryRules.visualPortions list exactly
+                    selectedPortion = "Porcion"
                     quickNote = "${estimate.portionEstimate}. Confianza: ${estimate.confidence}. ${estimate.notes}"
                     aiStatus = if (estimate.name.equals("Comida no identificada", ignoreCase = true) || estimate.confidence == "low") {
                         "No pudimos identificar bien la comida. Puedes editar o registrar manualmente."
@@ -207,9 +214,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     }
 
     fun processNutritionLabelImage(uri: Uri) {
+        // Cancel any in-flight OCR job before starting a new one
+        ocrJob?.cancel()
         ocrLoading = true
         ocrStatus = "Leyendo etiqueta..."
-        scope.launch {
+        ocrJob = scope.launch {
             runCatching {
                 val text = withContext(Dispatchers.IO) {
                     NutritionLabelOcr.readText(context, uri)
@@ -325,6 +334,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         aiLoading = false
         aiStatus = "Registro manual activo. Puedes escribir los datos."
         capturedPhotoUri = null
+        capturedPreview?.recycle()
         capturedPreview = null
         lastPreparedImage = null
         pendingGeminiImage = null
@@ -734,7 +744,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                                     saveAsFavorite = saveAsFavorite
                                 )
                                 if (!validation.isValid) {
-                                    Toast.makeText(context, validation.errors.first(), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, validation.errors.firstOrNull() ?: "Revisa los campos antes de guardar.", Toast.LENGTH_SHORT).show()
                                 } else {
                                     showDialog = false
                                     foodName = ""
@@ -910,9 +920,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         )
     }
 
-    if (showOcrReviewDialog && parsedNutritionLabel != null) {
+    // Use a local val to smart-cast safely and avoid NPE race between null-check and !! dereference
+    val currentParsedLabel = parsedNutritionLabel
+    if (showOcrReviewDialog && currentParsedLabel != null) {
         NutritionLabelReviewDialog(
-            parsed = parsedNutritionLabel!!,
+            parsed = currentParsedLabel,
             initialBarcode = barcodeStr,
             onDismiss = { showOcrReviewDialog = false },
             onSaveFood = { item ->
@@ -921,8 +933,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                 showOcrReviewDialog = false
             },
             onSaveAndRegister = { item, draft, favorite ->
-                viewModel.saveFoodItem(item)
-                viewModel.addFoodEntry(draft, saveAsFavorite = favorite)
+                val validation = viewModel.addFoodEntry(draft, saveAsFavorite = favorite)
+                if (validation.isValid) {
+                    viewModel.saveFoodItem(item)
+                }
+                validation
             },
             onSavedAndRegistered = {
                 ocrStatus = "Alimento guardado y registrado hoy."
@@ -1135,7 +1150,7 @@ private fun NutritionLabelReviewDialog(
                         if (validation.isValid) {
                             onSavedAndRegistered()
                         } else {
-                            Toast.makeText(context, validation.errors.first(), Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, validation.errors.firstOrNull() ?: "Revisa los campos antes de guardar.", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth()

@@ -214,7 +214,7 @@ private fun AnatomyPanel(
                 painter = painterResource(id = imageRes),
                 contentDescription = label,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.FillBounds
             )
 
             Canvas(

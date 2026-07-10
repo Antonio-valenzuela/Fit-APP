@@ -91,18 +91,15 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         )
     }
 
-    // Only collect and observe data if its modular features are enabled
-    val todayMeals = if (AdaptiveDashboardRules.shouldLoadNutrition(dashboardSettings)) {
-        viewModel.todayFoodLogs.collectAsStateWithLifecycle().value
-    } else emptyList()
+    // Always collect unconditionally (Rules of Compose Hooks must not be inside conditionals);
+    // gate the *usage* of the data via the feature flags below.
+    val todayMealsRaw by viewModel.todayFoodLogs.collectAsStateWithLifecycle()
+    val todayHealthRaw by viewModel.todayHealthLogs.collectAsStateWithLifecycle()
+    val allHealthLogsRaw by viewModel.allHealthLogs.collectAsStateWithLifecycle()
 
-    val todayHealth = if (AdaptiveDashboardRules.shouldLoadTodayHealth(dashboardSettings)) {
-        viewModel.todayHealthLogs.collectAsStateWithLifecycle().value
-    } else emptyList()
-
-    val allHealthLogs = if (AdaptiveDashboardRules.shouldLoadTodayHealth(dashboardSettings)) {
-        viewModel.allHealthLogs.collectAsStateWithLifecycle().value
-    } else emptyList()
+    val todayMeals = if (AdaptiveDashboardRules.shouldLoadNutrition(dashboardSettings)) todayMealsRaw else emptyList()
+    val todayHealth = if (AdaptiveDashboardRules.shouldLoadTodayHealth(dashboardSettings)) todayHealthRaw else emptyList()
+    val allHealthLogs = if (AdaptiveDashboardRules.shouldLoadTodayHealth(dashboardSettings)) allHealthLogsRaw else emptyList()
 
     val localRecommendations = remember(discipline, user?.goal, workouts, activitySessions, todayHealth, todayMeals, muscleState.recommendation?.muscle) {
         LocalRecommendationRules.build(
@@ -117,7 +114,12 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     }
     val dashboardSummary = remember(localRecommendations, todayHealth, todayMeals, allHealthLogs, workouts, activitySessions, muscleState.recommendation?.muscle, discipline) {
         DashboardTodaySummaryRules.build(
-            recommendation = localRecommendations.first(),
+            recommendation = localRecommendations.firstOrNull() ?: LocalRecommendation(
+                title = "Plan de hoy",
+                reason = "Completa una actividad para empezar tu día activo.",
+                actionLabel = "Comenzar",
+                routeHint = "workout"
+            ),
             todayHealthLogs = todayHealth,
             todayFoodLogs = todayMeals,
             allHealthLogs = allHealthLogs,

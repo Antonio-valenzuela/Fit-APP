@@ -100,6 +100,8 @@ class GeminiService {
                 }
             }
         } catch (e: Exception) {
+            // Re-throw CancellationException to respect structured concurrency
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e("GeminiService", "Proxy API call error: ${e.message}", e)
             FitCoreAiEngine.generateOfflineAdvice(user, recentVitals, requestType)
         }
@@ -169,9 +171,13 @@ class GeminiService {
 
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return@withContext Result.failure(
-                        IllegalStateException("Gemini respondio ${response.code}.")
-                    )
+                    val errorMsg = when (response.code) {
+                        503 -> "El servidor de IA de Gemini está temporalmente sobrecargado (Error 503). Por favor, introduce los datos manualmente o intenta en unos segundos."
+                        504, 502 -> "Tiempo de espera agotado en la red (Error ${response.code}). Por favor, intenta de nuevo."
+                        429 -> "Se ha superado el límite de solicitudes de IA (Error 429). Inténtalo más tarde."
+                        else -> "No se pudo conectar con la IA de Gemini (Código de error: ${response.code})."
+                    }
+                    return@withContext Result.failure(IllegalStateException(errorMsg))
                 }
                 val responseBody = response.body?.string()
                     ?: return@withContext Result.failure(IllegalStateException("Respuesta vacia de Gemini."))
@@ -214,6 +220,8 @@ class GeminiService {
             Log.e("GeminiService", "Food image estimate timeout: ${error.message}", error)
             Result.failure(IllegalStateException("Gemini tardo demasiado en analizar la foto. Intenta de nuevo con buena luz o una foto mas clara."))
         } catch (error: Exception) {
+            // Re-throw CancellationException to respect structured concurrency
+            if (error is kotlinx.coroutines.CancellationException) throw error
             Log.e("GeminiService", "Food image estimate error: ${error.message}", error)
             Result.failure(IllegalStateException("No se pudo analizar la comida. Revisa tu conexión o intenta de nuevo."))
         }

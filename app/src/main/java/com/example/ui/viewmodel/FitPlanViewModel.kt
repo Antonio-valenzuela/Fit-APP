@@ -62,6 +62,14 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     private val prefs = PreferencesManager(application)
     private val performanceRepository = PerformanceSettingsRepository(application)
     private val geminiService = GeminiService()
+    
+    private val streakRepo = com.example.data.repository.StreakRepository(db.streakDao())
+    private val activityRepo = com.example.data.repository.DailyActivityRepository(db.dailyActivityDao())
+    private val streakManager = com.example.data.repository.StreakManager(streakRepo, activityRepo)
+    private val missionRepo = com.example.data.repository.DailyMissionRepository(db.dailyMissionDao())
+    private val achRepo = com.example.data.repository.AchievementRepository(db.achievementDao())
+    private val achManager = com.example.data.repository.AchievementManager(achRepo)
+    private val missionManager = com.example.data.repository.DailyMissionManager(missionRepo, streakManager, achManager)
 
     // Preferences states
     private val _isLoggedIn = MutableStateFlow(prefs.isLoggedIn())
@@ -164,6 +172,11 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
 
     private val _fitCoreLoading = MutableStateFlow(false)
     val fitCoreLoading: StateFlow<Boolean> = _fitCoreLoading.asStateFlow()
+
+    // Job tracking to cancel in-flight Gemini calls and prevent duplicate concurrent requests
+    private var alertsJob: kotlinx.coroutines.Job? = null
+    private var habitsJob: kotlinx.coroutines.Job? = null
+    private var fitCoreJob: kotlinx.coroutines.Job? = null
 
     init {
         // Preload user data if logged in but empty in DB
@@ -847,18 +860,14 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                 }
                 activityDao.insertActivity(updated)
 
-                val streakRepo = com.example.data.repository.StreakRepository(db.streakDao())
-                val activityRepo = com.example.data.repository.DailyActivityRepository(db.dailyActivityDao())
-                val streakManager = com.example.data.repository.StreakManager(streakRepo, activityRepo)
                 val (newStreak, wasReset) = streakManager.updateStreak("local_user")
 
-                val missionRepo = com.example.data.repository.DailyMissionRepository(db.dailyMissionDao())
-                val achRepo = com.example.data.repository.AchievementRepository(db.achievementDao())
-                val achManager = com.example.data.repository.AchievementManager(achRepo)
-                val missionManager = com.example.data.repository.DailyMissionManager(missionRepo, streakManager, achManager)
                 missionManager.triggerMissionCheck("local_user", actionKey)
 
-                val userLogsCount = activityRepo.getAllActivitiesFlow("local_user").first()
+                // Use withTimeoutOrNull to avoid hanging forever on slow DB flows
+                val userLogsCount = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                    activityRepo.getAllActivitiesFlow("local_user").first()
+                } ?: emptyList()
 
                 if (actionKey == "log_food") {
                     achManager.checkAndAward("local_user", "ach_first_food")
@@ -893,7 +902,9 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                     achManager.checkAndAward("local_user", "ach_active_week")
                 }
             } catch (e: Exception) {
-                // Keep it completely silent on background
+                // Re-throw CancellationException to respect structured concurrency
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.w("FitPlanVM", "Gamification hook error for $actionKey: ${e.message}")
             }
         }
     }
@@ -937,14 +948,6 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                     )
                 )
 
-                val streakRepo = com.example.data.repository.StreakRepository(db.streakDao())
-                val activityRepo = com.example.data.repository.DailyActivityRepository(db.dailyActivityDao())
-                val streakManager = com.example.data.repository.StreakManager(streakRepo, activityRepo)
-                val missionRepo = com.example.data.repository.DailyMissionRepository(db.dailyMissionDao())
-                val achRepo = com.example.data.repository.AchievementRepository(db.achievementDao())
-                val achManager = com.example.data.repository.AchievementManager(achRepo)
-                val missionManager = com.example.data.repository.DailyMissionManager(missionRepo, streakManager, achManager)
-
                 streakManager.updateStreak("local_user")
                 actionKeys.forEach { key ->
                     missionManager.triggerMissionCheck("local_user", key)
@@ -952,7 +955,9 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                     if (key == "log_workout") achManager.checkAndAward("local_user", "ach_first_workout")
                 }
             } catch (e: Exception) {
-                // Daily check-in should never block the user.
+                // Re-throw CancellationException to respect structured concurrency
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                android.util.Log.w("FitPlanVM", "Daily check-in hook error: ${e.message}")
             }
         }
     }
@@ -1074,16 +1079,22 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
 
     // AI Wellness Advice (triggers Gemini API or fallback offline)
     fun fetchPreventiveAlerts() {
-        viewModelScope.launch {
-            val user = repository.getUserDirectly() ?: return@launch
-            val recentLogs = repository.allHealthLogs.first().take(10)
+        // Cancel any in-flight request to prevent duplicate concurrent Gemini calls
+        alertsJob?.cancel()
+        alertsJob = viewModelScope.launch {
+            // Set loading state BEFORE any suspending calls to show spinner immediately
             _alertsLoading.value = true
             _preventiveAlerts.value = null
             try {
+                val user = repository.getUserDirectly() ?: return@launch
+                val recentLogs = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                    repository.allHealthLogs.first().take(10)
+                } ?: emptyList()
                 val advice = geminiService.getPreventiveAdvice(user, recentLogs, "alertas")
                 _preventiveAlerts.value = advice
             } catch (e: Exception) {
-                _preventiveAlerts.value = "Imposible conectar con el motor preventivo en este momento: ${e.localizedMessage}"
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _preventiveAlerts.value = "Imposible conectar con el motor preventivo en este momento."
             } finally {
                 _alertsLoading.value = false
             }
@@ -1091,16 +1102,22 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun fetchHealthyHabits() {
-        viewModelScope.launch {
-            val user = repository.getUserDirectly() ?: return@launch
-            val recentLogs = repository.allHealthLogs.first().take(10)
+        // Cancel any in-flight request to prevent duplicate concurrent Gemini calls
+        habitsJob?.cancel()
+        habitsJob = viewModelScope.launch {
+            // Set loading state BEFORE any suspending calls to show spinner immediately
             _habitsLoading.value = true
             _habitsAdvice.value = null
             try {
+                val user = repository.getUserDirectly() ?: return@launch
+                val recentLogs = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                    repository.allHealthLogs.first().take(10)
+                } ?: emptyList()
                 val advice = geminiService.getPreventiveAdvice(user, recentLogs, "hábitos")
                 _habitsAdvice.value = advice
             } catch (e: Exception) {
-                _habitsAdvice.value = "Imposible conectar con el mentor de hábitos en este momento: ${e.localizedMessage}"
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                _habitsAdvice.value = "Imposible conectar con el mentor de hábitos en este momento."
             } finally {
                 _habitsLoading.value = false
             }
@@ -1108,15 +1125,21 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun fetchFitCoreAdvice(requestType: String) {
-        viewModelScope.launch {
-            val user = repository.getUserDirectly() ?: return@launch
-            val recentLogs = repository.getRecentHealthLogs(10).first()
+        // Cancel any in-flight request to prevent duplicate concurrent Gemini calls
+        fitCoreJob?.cancel()
+        fitCoreJob = viewModelScope.launch {
+            // Set loading state BEFORE any suspending calls to show spinner immediately
             _fitCoreLoading.value = true
             _fitCoreAdvice.value = null
             try {
+                val user = repository.getUserDirectly() ?: return@launch
+                val recentLogs = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
+                    repository.getRecentHealthLogs(10).first()
+                } ?: emptyList()
                 ProductAnalytics.track("coach_message_sent", mapOf("topic" to requestType))
                 _fitCoreAdvice.value = geminiService.getPreventiveAdvice(user, recentLogs, requestType)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _fitCoreAdvice.value = "FitCore no pudo generar la recomendación ahora. Intenta de nuevo en unos segundos."
             } finally {
                 _fitCoreLoading.value = false

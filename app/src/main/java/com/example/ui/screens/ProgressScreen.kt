@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.data.model.UserDiscipline
 import com.example.ui.muscles.MuscleMapViewModel
 import com.example.ui.theme.frostedMeshBackground
@@ -29,7 +29,7 @@ fun ProgressScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
     val discipline = remember(user?.trainingDiscipline) { UserDiscipline.fromStoredName(user?.trainingDiscipline) }
-    val muscleViewModel: MuscleMapViewModel = composeViewModel()
+    val muscleViewModel: MuscleMapViewModel = hiltViewModel()
     val muscleState by muscleViewModel.state.collectAsStateWithLifecycle()
 
     var activeTrendTab by remember { mutableStateOf("Peso") }

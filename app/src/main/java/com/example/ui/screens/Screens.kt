@@ -193,14 +193,14 @@ fun FitPlanBottomBar(
     val isDark = LocalThemeIsDark.current
     val items = remember(discipline) { DisciplineNavigationPolicy.bottomItemsFor(discipline) }
     NavigationBar(
-        containerColor = Color(0xF20D0D0D),
+        containerColor = if (isDark) Color(0xF2161720) else Color(0xF2FFFFFF),
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0x3300C27B),
+                        if (isDark) Color(0x336C5DD3) else Color(0x3D4361EE),
                         Color.Transparent
                     )
                 ),
