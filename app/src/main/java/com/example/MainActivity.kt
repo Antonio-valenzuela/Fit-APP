@@ -31,8 +31,8 @@ class MainActivity : ComponentActivity() {
             val useDarkTheme = remember(themeSelector, systemDark) {
                 when (themeSelector) {
                     "dark" -> true
-                    "light" -> true
-                    else -> true
+                    "light" -> false
+                    else -> systemDark
                 }
             }
 

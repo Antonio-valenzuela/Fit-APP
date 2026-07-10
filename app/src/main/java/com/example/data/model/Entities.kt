@@ -1,4 +1,4 @@
-﻿package com.example.data.model
+package com.example.data.model
 
 import androidx.room.Entity
 import androidx.room.Index
@@ -25,6 +25,18 @@ data class UserEntity(
     @ColumnInfo(defaultValue = "GYM")
     val trainingDiscipline: String = UserDiscipline.GYM.name
 )
+
+fun UserEntity.getTrainingPlace(): String {
+    val parts = goal.split("|")
+    for (part in parts) {
+        val trimmed = part.trim()
+        if (trimmed.startsWith("Lugar:", ignoreCase = true)) {
+            return trimmed.substringAfter("Lugar:").trim()
+        }
+    }
+    return "Ambos"
+}
+
 
 @Entity(
     tableName = "food_logs",

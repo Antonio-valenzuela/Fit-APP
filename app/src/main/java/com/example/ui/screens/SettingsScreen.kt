@@ -1,4 +1,4 @@
-﻿package com.example.ui.screens
+package com.example.ui.screens
 
 import android.Manifest
 import android.content.Intent
@@ -72,6 +72,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
 import com.example.BuildConfig
@@ -80,6 +86,7 @@ import com.example.data.report.HealthReportPdfGenerator
 import com.example.data.model.AppPerformanceMode
 import com.example.data.model.HybridPlanSettings
 import com.example.data.model.UserDiscipline
+import com.example.data.model.getTrainingPlace
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.frostedMeshBackground
 import com.example.ui.viewmodel.FitPlanViewModel
@@ -113,6 +120,13 @@ fun SettingsScreen(
     var versionTapCount by remember { mutableIntStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showHealthNotice by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var editName by remember(user) { mutableStateOf(user?.name.orEmpty()) }
+    var editAge by remember(user) { mutableStateOf(user?.age?.toString().orEmpty()) }
+    var editWeight by remember(user) { mutableStateOf(user?.weightKg?.toString().orEmpty()) }
+    var editHeight by remember(user) { mutableStateOf(user?.heightCm?.toString().orEmpty()) }
+    var editGender by remember(user) { mutableStateOf(user?.gender ?: "Masculino") }
+    var editPlace by remember(user) { mutableStateOf(user?.getTrainingPlace() ?: "Ambos") }
 
     fun showMessage(message: String) {
         scope.launch { snackbarHostState.showSnackbar(message = message, withDismissAction = true) }
@@ -205,6 +219,121 @@ fun SettingsScreen(
         )
     }
 
+    if (showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = { Text("Editar perfil", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Nombre") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editAge,
+                        onValueChange = { editAge = it },
+                        label = { Text("Edad") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editWeight,
+                        onValueChange = { editWeight = it },
+                        label = { Text("Peso (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editHeight,
+                        onValueChange = { editHeight = it },
+                        label = { Text("Estatura (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Text("Sexo", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf("Masculino", "Femenino").forEach { g ->
+                            FilterChip(
+                                selected = editGender == g,
+                                onClick = { editGender = g },
+                                label = { Text(g) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    Text("Lugar de entrenamiento", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                        listOf("Casa", "Gimnasio", "Ambos").forEach { option ->
+                            FilterChip(
+                                selected = editPlace == option,
+                                onClick = { editPlace = option },
+                                label = { Text(option, fontSize = 11.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val aNum = editAge.toIntOrNull() ?: 25
+                        val wNum = editWeight.toFloatOrNull() ?: 70.0f
+                        val hNum = editHeight.toFloatOrNull() ?: 170.0f
+                        if (editName.isBlank() || aNum !in 10..100 || wNum !in 30f..250f || hNum !in 100f..250f) {
+                            Toast.makeText(context, "Por favor revisa que todos los campos sean correctos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        showEditProfileDialog = false
+                        val currentGoal = user?.goal.orEmpty()
+                        val newGoalString = if (currentGoal.contains("|")) {
+                            val parts = currentGoal.split("|").map { it.trim() }.toMutableList()
+                            var replaced = false
+                            for (i in parts.indices) {
+                                if (parts[i].startsWith("Lugar:", ignoreCase = true)) {
+                                    parts[i] = "Lugar: $editPlace"
+                                    replaced = true
+                                    break
+                                }
+                            }
+                            if (!replaced) {
+                                parts.add("Lugar: $editPlace")
+                            }
+                            parts.joinToString(" | ")
+                        } else {
+                            "$currentGoal | Lugar: $editPlace"
+                        }
+                        val parsedGoal = if (currentGoal.contains("|")) currentGoal.substringBefore("|").trim() else currentGoal
+                        viewModel.completeOnboarding(
+                            name = editName,
+                            age = aNum,
+                            weightKg = wNum,
+                            heightCm = hNum,
+                            gender = editGender,
+                            activityLevel = user?.activityLevel ?: "Moderado",
+                            goal = newGoalString,
+                            disclaimerAccepted = true,
+                            trainingDiscipline = user?.trainingDiscipline ?: UserDiscipline.GYM.name
+                        )
+                        Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                    }
+                ) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = Color.Transparent,
         modifier = Modifier.frostedMeshBackground(isDark),
@@ -242,13 +371,6 @@ fun SettingsScreen(
                     SettingsActionItem(
                         title = "Editar perfil",
                         description = "Actualiza tu nombre, objetivo y datos base.",
-                        icon = Icons.Default.Person,
-                        onClick = { onNavigate(Destinations.PROFILE) }
-                    )
-                    HorizontalDivider()
-                    SettingsActionItem(
-                        title = "Actualizar mi plan",
-                        description = "Vuelve al onboarding para ajustar objetivo, nivel y meta semanal.",
                         icon = Icons.Default.FitnessCenter,
                         onClick = {
                             viewModel.restartOnboarding()

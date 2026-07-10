@@ -66,6 +66,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.UserDiscipline
 import com.example.data.model.Muscle
+import com.example.data.model.getTrainingPlace
 import com.example.ui.muscles.MuscleMapViewModel
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.frostedMeshBackground
@@ -102,6 +103,17 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
 
     LaunchedEffect(muscleState.recommendation?.muscle) {
         muscleState.recommendation?.muscle?.let { selectedMuscle = it }
+    }
+
+    LaunchedEffect(user) {
+        user?.let { u ->
+            val trainingPlace = u.getTrainingPlace()
+            selectedEquipment = when (trainingPlace) {
+                "Casa" -> "Casa"
+                "Gimnasio" -> "Gym"
+                else -> "Gym"
+            }
+        }
     }
 
     LaunchedEffect(isTimerRunning) {
@@ -150,8 +162,8 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
 
     val isDark = LocalThemeIsDark.current
     val recommendedMuscle = muscleState.recommendation?.muscle ?: selectedMuscle ?: Muscle.CHEST
-    val recommendedRoutine = remember(recommendedMuscle) {
-        TrainingCatalog.routineForMuscle(recommendedMuscle.legacyName)
+    val recommendedRoutine = remember(recommendedMuscle, selectedEquipment) {
+        TrainingCatalog.routineForMuscle(recommendedMuscle.legacyName, selectedEquipment)
     }
     val filteredRoutines = remember(selectedTime, selectedEquipment, selectedObjective) {
         TrainingCatalog.filteredRoutines(selectedTime, selectedEquipment, selectedObjective)
@@ -340,7 +352,14 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                 }
 
                 item {
-                    FreeWorkoutCard(onStart = { startRoutine(TrainingCatalog.routines.first { it.id == "beginner_full_body" }) })
+                    FreeWorkoutCard(onStart = {
+                        val freeRoutine = if (selectedEquipment == "Gym") {
+                            TrainingCatalog.routines.first { it.id == "legs_glutes" }
+                        } else {
+                            TrainingCatalog.routines.first { it.id == "beginner_full_body" }
+                        }
+                        startRoutine(freeRoutine)
+                    })
                 }
 
                 item {

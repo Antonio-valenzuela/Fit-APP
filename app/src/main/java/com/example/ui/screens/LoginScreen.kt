@@ -1,4 +1,4 @@
-﻿package com.example.ui.screens
+package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.*
@@ -51,21 +51,13 @@ fun LoginScreen(viewModel: FitPlanViewModel) {
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header Image/Logo Setup
-            Box(
+            Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.logo_legacy),
+                contentDescription = "FitPlan MX Logo",
                 modifier = Modifier
                     .size(80.dp)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "FitPlan MX Logo",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

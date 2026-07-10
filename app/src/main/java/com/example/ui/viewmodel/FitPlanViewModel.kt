@@ -430,7 +430,13 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                 name = "Usuario FitPlan",
                 email = prefs.getUserEmail() ?: "user@fitplan.mx"
             )
-            repository.saveUser(current.copy(goal = goal))
+            val currentGoal = current.goal
+            val updatedGoal = if (currentGoal.contains("|")) {
+                goal + " | " + currentGoal.substringAfter("|").trim()
+            } else {
+                goal
+            }
+            repository.saveUser(current.copy(goal = updatedGoal))
             ProductAnalytics.track("goal_updated", mapOf("goal" to goal.take(60)))
         }
     }

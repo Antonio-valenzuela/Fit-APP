@@ -1,4 +1,4 @@
-﻿package com.example.ui.workout
+package com.example.ui.workout
 
 data class ExerciseCatalogItem(
     val id: String,
@@ -74,9 +74,15 @@ object TrainingCatalog {
         return exercises.filter { it.primaryMuscle == muscle || it.secondaryMuscles.contains(muscle) }
     }
 
-    fun routineForMuscle(muscle: String): SuggestedRoutine {
-        return routines.firstOrNull { it.primaryMuscles.contains(muscle) }
-            ?: routines.first { it.id == "beginner_full_body" }
+    fun routineForMuscle(muscle: String, preferredEquipment: String = "Gym"): SuggestedRoutine {
+        val normalized = preferredEquipment.lowercase()
+        val matches = routines.filter { it.primaryMuscles.contains(muscle) }
+        val preferred = if (normalized == "casa" || normalized == "sin equipo") {
+            matches.firstOrNull { it.equipment.lowercase() == "casa" || it.equipment.lowercase() == "sin equipo" }
+        } else {
+            matches.firstOrNull { it.equipment.lowercase() == "gym" }
+        }
+        return preferred ?: matches.firstOrNull() ?: routines.first { it.id == "beginner_full_body" }
     }
 
     fun filteredRoutines(maxMinutes: Int, equipment: String, objective: String): List<SuggestedRoutine> {
