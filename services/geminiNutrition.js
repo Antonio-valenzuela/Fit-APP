@@ -47,7 +47,10 @@ class NutritionValidationError extends Error {
   }
 }
 
-function buildGeminiRequest(imageBase64, mimeType = 'image/jpeg') {
+function buildGeminiRequest(imageBase64, mimeType = 'image/jpeg', thinkingLevel = 'minimal') {
+  if (!['minimal', 'medium'].includes(thinkingLevel)) {
+    throw new NutritionValidationError('INVALID_THINKING_LEVEL', 'thinkingLevel', 'Nivel de thinking no permitido.')
+  }
   return {
     contents: [{
       role: 'user',
@@ -60,7 +63,27 @@ function buildGeminiRequest(imageBase64, mimeType = 'image/jpeg') {
       responseMimeType: 'application/json',
       responseJsonSchema: NUTRITION_SCHEMA,
       maxOutputTokens: 512,
-      thinkingConfig: { thinkingLevel: 'minimal' }
+      thinkingConfig: { thinkingLevel }
+    }
+  }
+}
+
+function buildGeminiTextRequest(description, thinkingLevel = 'minimal') {
+  if (!['minimal', 'medium'].includes(thinkingLevel)) {
+    throw new NutritionValidationError('INVALID_THINKING_LEVEL', 'thinkingLevel', 'Nivel de thinking no permitido.')
+  }
+  return {
+    contents: [{
+      role: 'user',
+      parts: [{
+        text: `${NUTRITION_PROMPT} En esta prueba no hay imagen. Analiza unicamente esta descripcion controlada: ${description}`
+      }]
+    }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseJsonSchema: NUTRITION_SCHEMA,
+      maxOutputTokens: 512,
+      thinkingConfig: { thinkingLevel }
     }
   }
 }
@@ -161,6 +184,7 @@ module.exports = {
   NUTRITION_SCHEMA,
   NutritionValidationError,
   buildGeminiRequest,
+  buildGeminiTextRequest,
   extractStructuredText,
   validateNutrition,
   parseNutritionEnvelope,

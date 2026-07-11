@@ -1,0 +1,676 @@
+{
+  "datasetId": "fitplan-gemini-food-benchmark-v1",
+  "generatedAtUtc": "2026-07-11T01:02:19.5776147Z",
+  "source": "Wikimedia Commons licensed 2400 px derivatives",
+  "caseCount": 10,
+  "cases": [
+    {
+      "id": "simple_apple",
+      "category": "simple_food",
+      "expectedVisibleContent": "one whole red apple",
+      "fileName": "simple_apple.jpg",
+      "commonsTitle": "File:Liat Portal for Foodie Disorder - Red Apple (Whole Fruit).jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Liat%20Portal%20for%20Foodie%20Disorder%20-%20Red%20Apple%20%28Whole%20Fruit%29.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Liat%20Portal%20for%20Foodie%20Disorder%20-%20Red%20Apple%20%28Whole%20Fruit%29.jpg?width=2400",
+      "author": "HaJunkiyada",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commonsOriginal": {
+        "width": 3024,
+        "height": 4032
+      },
+      "original": {
+        "sha256": "3b72c032b859a9d9c9b0ea6a5aff0faa0bb368457baf4f84b6b80e4546f7850e",
+        "width": 1920,
+        "height": 2560,
+        "mimeType": "image/jpeg",
+        "bytes": 581835
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/simple_apple.jpg",
+          "sha256": "510be91ee164d10af975debbfbe4fd47e1a11486b9eea534ba133c6b88e6f214",
+          "width": 1200,
+          "height": 1600,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 247506
+        },
+        "balanced": {
+          "file": "prepared/balanced/simple_apple.jpg",
+          "sha256": "ff1812f1fe35312c58c0d08d2c9d5c81fd1b12514ff8c090302afcb147f97fd1",
+          "width": 960,
+          "height": 1280,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 107844
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/simple_apple.jpg",
+          "sha256": "d019987a9cf37fa8c151706ff471d436e003ff3622e85f21a5a7b42e3412da48",
+          "width": 720,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 50310
+        },
+        "realistic": {
+          "file": "prepared/realistic/simple_apple.jpg",
+          "sha256": "3ddbbb8b7552016c0343a1015f0ce7ab17f866069a8be1f945a1ddca3f2580c9",
+          "width": 1800,
+          "height": 2400,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 640107
+        }
+      }
+    },
+    {
+      "id": "mexican_tacos",
+      "category": "mexican_food",
+      "expectedVisibleContent": "three tacos al pastor with a soft drink and lime",
+      "fileName": "mexican_tacos.jpg",
+      "commonsTitle": "File:Tacos al pastor - taquería Los Güeros de Boturini.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Tacos%20al%20pastor%20-%20taquer%C3%ADa%20Los%20G%C3%BCeros%20de%20Boturini.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Tacos%20al%20pastor%20-%20taquer%C3%ADa%20Los%20G%C3%BCeros%20de%20Boturini.jpg?width=2400",
+      "author": "ProtoplasmaKid",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "commonsOriginal": {
+        "width": 3066,
+        "height": 4088
+      },
+      "original": {
+        "sha256": "43a248fcbd7075ca8d7a3bc15f81bc95bd435fd940ce990f91b115ad218223ca",
+        "width": 3066,
+        "height": 4088,
+        "mimeType": "image/jpeg",
+        "bytes": 8764540
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/mexican_tacos.jpg",
+          "sha256": "92d3827d737384086d87052cb8fc591bbd7b9efbde6f879d908211c65cccad90",
+          "width": 1200,
+          "height": 1600,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 314387
+        },
+        "balanced": {
+          "file": "prepared/balanced/mexican_tacos.jpg",
+          "sha256": "cdc10e8626ef0768a03d60b61f5e829c73719fe994c2250fb1f50a0ec884c5b5",
+          "width": 960,
+          "height": 1280,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 157871
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/mexican_tacos.jpg",
+          "sha256": "624ae48e4aa6a0829ea822797f7a2da1fe42d7a911d01eed5da76bf393d2a69a",
+          "width": 720,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 78750
+        },
+        "realistic": {
+          "file": "prepared/realistic/mexican_tacos.jpg",
+          "sha256": "26eb4d6816bbaec18e9bf39accd8d5a8220cb66fc5c661fea1b1cc6e797b94e0",
+          "width": 1800,
+          "height": 2400,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 782953
+        }
+      }
+    },
+    {
+      "id": "mixed_salad",
+      "category": "multiple_ingredients",
+      "expectedVisibleContent": "mixed vegetable salad with herbs",
+      "fileName": "mixed_salad.jpg",
+      "commonsTitle": "File:Liat Portal for Foodie Disorder - Mixed vegetable salad with fresh herbs.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Liat%20Portal%20for%20Foodie%20Disorder%20-%20Mixed%20vegetable%20salad%20with%20fresh%20herbs.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Liat%20Portal%20for%20Foodie%20Disorder%20-%20Mixed%20vegetable%20salad%20with%20fresh%20herbs.jpg?width=2400",
+      "author": "HaJunkiyada",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commonsOriginal": {
+        "width": 3024,
+        "height": 4032
+      },
+      "original": {
+        "sha256": "3ff30dc22471dde242fe4044ceac4a7fa114ecc9fd8e331774677261e49d682e",
+        "width": 1920,
+        "height": 2560,
+        "mimeType": "image/jpeg",
+        "bytes": 892472
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/mixed_salad.jpg",
+          "sha256": "0b3ff3b633405449592ee4262d93b10f2391f013f221be391415893c17689971",
+          "width": 1200,
+          "height": 1600,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 278133
+        },
+        "balanced": {
+          "file": "prepared/balanced/mixed_salad.jpg",
+          "sha256": "1966530c01185c024b5c12db46321f5d66138b4a5be4ba886566f15ca6e38b2c",
+          "width": 960,
+          "height": 1280,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 113858
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/mixed_salad.jpg",
+          "sha256": "5ecea681ab65b6136cf20a2e4b4de7d8dbf22f0bb0ab556605ca1c05308a3404",
+          "width": 720,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 56058
+        },
+        "realistic": {
+          "file": "prepared/realistic/mixed_salad.jpg",
+          "sha256": "4491fbd13059abecf1bdc88c1e40c3ac6b9cca3336bd70c50d4313c388535a96",
+          "width": 1800,
+          "height": 2400,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 944907
+        }
+      }
+    },
+    {
+      "id": "orange_juice",
+      "category": "beverage",
+      "expectedVisibleContent": "one glass of orange juice",
+      "fileName": "orange_juice.jpg",
+      "commonsTitle": "File:A glass of orange juice (2014-12-23).JPG",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:A%20glass%20of%20orange%20juice%20%282014-12-23%29.JPG",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/A%20glass%20of%20orange%20juice%20%282014-12-23%29.JPG?width=2400",
+      "author": "Lombroso",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commonsOriginal": {
+        "width": 2448,
+        "height": 3264
+      },
+      "original": {
+        "sha256": "77319ff766bb6fa326a1457f92914b27d18297547963465c1198dfb5e16c8645",
+        "width": 1920,
+        "height": 2560,
+        "mimeType": "image/jpeg",
+        "bytes": 903401
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/orange_juice.jpg",
+          "sha256": "7f43547fd1fa03ee0fc7f1122488ae1a6b6b1116061cac648fa0ccb0a93d4af5",
+          "width": 1200,
+          "height": 1600,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 286404
+        },
+        "balanced": {
+          "file": "prepared/balanced/orange_juice.jpg",
+          "sha256": "2ec2058984fdba5bf2c322944b154f92736034d67200ff533f60b7ab0dfad7f1",
+          "width": 960,
+          "height": 1280,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 108686
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/orange_juice.jpg",
+          "sha256": "61d687500533d2d9aaa89ed1d185ae940ad0601e29654feefbcf3e5e2ca3cab2",
+          "width": 720,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 47299
+        },
+        "realistic": {
+          "file": "prepared/realistic/orange_juice.jpg",
+          "sha256": "da6ca43be31fdada920804e79db1fb7ce795d3c636279cc01a7f769402acb0d9",
+          "width": 1800,
+          "height": 2400,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 972545
+        }
+      }
+    },
+    {
+      "id": "large_pizza",
+      "category": "large_portion",
+      "expectedVisibleContent": "two large slices of Margherita pizza",
+      "fileName": "large_pizza.jpg",
+      "commonsTitle": "File:Margherita pizza on plate.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Margherita%20pizza%20on%20plate.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Margherita%20pizza%20on%20plate.jpg?width=2400",
+      "author": "Shisma",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "commonsOriginal": {
+        "width": 4032,
+        "height": 3024
+      },
+      "original": {
+        "sha256": "a98ab9e0572910d2fc3b66831e2ac0f0cce418ff5946c133fcfde3898761ccef",
+        "width": 3840,
+        "height": 2880,
+        "mimeType": "image/jpeg",
+        "bytes": 1633916
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/large_pizza.jpg",
+          "sha256": "a4426ce071e320ed5ddeff9412372f8879fca77121adb83e8cce0bf122116a9b",
+          "width": 1600,
+          "height": 1200,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 305769
+        },
+        "balanced": {
+          "file": "prepared/balanced/large_pizza.jpg",
+          "sha256": "d5e7b01365b14bdecf7b1c76d739c76193c504185dbdb72ea73e8f7a1e6fa808",
+          "width": 1280,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 154199
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/large_pizza.jpg",
+          "sha256": "d54d58323e7e7ae758296eb474790ed0eedb7c995e00b8b942b59f4d6737f87d",
+          "width": 960,
+          "height": 720,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 78895
+        },
+        "realistic": {
+          "file": "prepared/realistic/large_pizza.jpg",
+          "sha256": "68e6e2d3d8db3336b5f2060901969041c9b808611e16b4d6ce63e2fb842a78da",
+          "width": 2400,
+          "height": 1800,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 851846
+        }
+      }
+    },
+    {
+      "id": "ambiguous_stew",
+      "category": "ambiguous_food",
+      "expectedVisibleContent": "bowl of Irish stew",
+      "fileName": "ambiguous_stew.jpg",
+      "commonsTitle": "File:-2022-01-06 Bowl of Irish Stew, Trimingham, Norfolk.JPG",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:-2022-01-06%20Bowl%20of%20Irish%20Stew%2C%20Trimingham%2C%20Norfolk.JPG",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/-2022-01-06%20Bowl%20of%20Irish%20Stew%2C%20Trimingham%2C%20Norfolk.JPG?width=2400",
+      "author": "Kolforn",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commonsOriginal": {
+        "width": 4367,
+        "height": 2859
+      },
+      "original": {
+        "sha256": "84b8e72fe1c7ef0f562471ae8cf15ecc6f30203b0b425362d7bc290a18d35ae3",
+        "width": 3840,
+        "height": 2514,
+        "mimeType": "image/jpeg",
+        "bytes": 1526695
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/ambiguous_stew.jpg",
+          "sha256": "d2c52c19e1a61c3d41b0f69848ded4552d3633047b50890dd00f0f979b0555ed",
+          "width": 1600,
+          "height": 1048,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 268379
+        },
+        "balanced": {
+          "file": "prepared/balanced/ambiguous_stew.jpg",
+          "sha256": "44ec6afd848ec3ca2a8f3e20423421daf9775a0c10a3b04353cbd180de6637f5",
+          "width": 1280,
+          "height": 838,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 123420
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/ambiguous_stew.jpg",
+          "sha256": "83ee9c35158c5e447181f494c2867b3b7ba670e1d1987aeec836651dde0ebf8d",
+          "width": 960,
+          "height": 629,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 60838
+        },
+        "realistic": {
+          "file": "prepared/realistic/ambiguous_stew.jpg",
+          "sha256": "b98d2238d262d13281d9eb593a5935a180be1c3d27df5293e67d761a5f49a47a",
+          "width": 2400,
+          "height": 1571,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 797245
+        }
+      }
+    },
+    {
+      "id": "empty_plate",
+      "category": "empty_plate",
+      "expectedVisibleContent": "used plate with no meaningful food portion",
+      "fileName": "empty_plate.jpg",
+      "commonsTitle": "File:The way we like our plates at the end of dinner- Dinner on New Year's Day 2024 - The Eighth Day of Christmas - 53435741068.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:The%20way%20we%20like%20our%20plates%20at%20the%20end%20of%20dinner-%20Dinner%20on%20New%20Year%27s%20Day%202024%20-%20The%20Eighth%20Day%20of%20Christmas%20-%2053435741068.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/The%20way%20we%20like%20our%20plates%20at%20the%20end%20of%20dinner-%20Dinner%20on%20New%20Year%27s%20Day%202024%20-%20The%20Eighth%20Day%20of%20Christmas%20-%2053435741068.jpg?width=2400",
+      "author": "Haydn Blackey",
+      "license": "CC BY-SA 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "commonsOriginal": {
+        "width": 1436,
+        "height": 1448
+      },
+      "original": {
+        "sha256": "07c5267614c789a17afc58db545f2cb066d796823d8b73b1ae30b4a442d6a88b",
+        "width": 1436,
+        "height": 1448,
+        "mimeType": "image/jpeg",
+        "bytes": 225429
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/empty_plate.jpg",
+          "sha256": "c35d44a74ccab8ff1ab77122a789e6f67c6d90dcaffc24e0396665fe1d0a385f",
+          "width": 1436,
+          "height": 1448,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 217350
+        },
+        "balanced": {
+          "file": "prepared/balanced/empty_plate.jpg",
+          "sha256": "99cefaa4ee4b1ebf1c7ab2e4da26f8ab9e33c8ef0abf5bfb0fa04d132fc98311",
+          "width": 1269,
+          "height": 1280,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 144042
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/empty_plate.jpg",
+          "sha256": "345dd4b1a8d05e87fb78c6a2a3ff073c9822786b62fab293b0759a3ebfc6b930",
+          "width": 952,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 72312
+        },
+        "realistic": {
+          "file": "prepared/realistic/empty_plate.jpg",
+          "sha256": "b30f6d190df127464671bae05854c1d78c6d380b3f50a357095d5dfbed30b89c",
+          "width": 1436,
+          "height": 1448,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 258427
+        }
+      }
+    },
+    {
+      "id": "blurry_asparagus",
+      "category": "blurry_food",
+      "expectedVisibleContent": "blurred asparagus",
+      "fileName": "blurry_asparagus.jpg",
+      "commonsTitle": "File:Blurry Asparagus (3714655569).jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Blurry%20Asparagus%20%283714655569%29.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Blurry%20Asparagus%20%283714655569%29.jpg?width=2400",
+      "author": "DGriebeling",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "commonsOriginal": {
+        "width": 3888,
+        "height": 2592
+      },
+      "original": {
+        "sha256": "4b4b34cd45ead39e907bf469bf43937cf0d877f2fea0956505e9ab4883b5cfd8",
+        "width": 3840,
+        "height": 2560,
+        "mimeType": "image/jpeg",
+        "bytes": 1062015
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/blurry_asparagus.jpg",
+          "sha256": "f09f830f99b8dc6731e111112db9083b2ca14dcb212b4d1a91875e18879ea067",
+          "width": 1600,
+          "height": 1067,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 159164
+        },
+        "balanced": {
+          "file": "prepared/balanced/blurry_asparagus.jpg",
+          "sha256": "fc563d911942de1d757bd0599c4581efe4e99457f086340c6159554b388133ee",
+          "width": 1280,
+          "height": 853,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 77853
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/blurry_asparagus.jpg",
+          "sha256": "854ac867a01c71ded7fecae58398d06418432983ca1d2fdee61026e98e452290",
+          "width": 960,
+          "height": 640,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 42653
+        },
+        "realistic": {
+          "file": "prepared/realistic/blurry_asparagus.jpg",
+          "sha256": "33129029c50377372c5e6e3ab696bf79b5172f8caa54c6f24775304bfcfa40b1",
+          "width": 2400,
+          "height": 1600,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 514102
+        }
+      }
+    },
+    {
+      "id": "non_food_mug",
+      "category": "non_food",
+      "expectedVisibleContent": "museum shaving mug, not food",
+      "fileName": "non_food_mug.jpg",
+      "commonsTitle": "File:Mug, shaving (AM 1965.122-1).jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Mug%2C%20shaving%20%28AM%201965.122-1%29.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Mug%2C%20shaving%20%28AM%201965.122-1%29.jpg?width=2400",
+      "author": "Not supplied in Commons Artist metadata",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "commonsOriginal": {
+        "width": 2592,
+        "height": 1944
+      },
+      "original": {
+        "sha256": "b73f7cce0d4ec7bcdc388a39de2c789be5a91ab28aac5ab20e4c59500b72f273",
+        "width": 2592,
+        "height": 1944,
+        "mimeType": "image/jpeg",
+        "bytes": 2028679
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/non_food_mug.jpg",
+          "sha256": "a9571669391d15b174efdd0561108c34805cd50a2b0cd90c2f9e49cc5fb23859",
+          "width": 1600,
+          "height": 1200,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 214685
+        },
+        "balanced": {
+          "file": "prepared/balanced/non_food_mug.jpg",
+          "sha256": "9594a9b5ae7200907fad87ecd148851f6ed6fac9c4b1b10e5a2d6760c0e4425b",
+          "width": 1280,
+          "height": 960,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 100336
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/non_food_mug.jpg",
+          "sha256": "f32d6240691c239c08fab40d1b07f6d817c02f6a50e6400613f61fe9ba5e2515",
+          "width": 960,
+          "height": 720,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 50441
+        },
+        "realistic": {
+          "file": "prepared/realistic/non_food_mug.jpg",
+          "sha256": "e807d037929f4cc8c0359bb0fe9830e4146a5082b4de0e57c3388199ef81db32",
+          "width": 2400,
+          "height": 1800,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 653979
+        }
+      }
+    },
+    {
+      "id": "fruit_bowl",
+      "category": "varied_meal",
+      "expectedVisibleContent": "fruit salad or fruit bowl",
+      "fileName": "fruit_bowl.jpg",
+      "commonsTitle": "File:Fruit Salad Or Fruit Bowl.jpg",
+      "sourcePage": "https://commons.wikimedia.org/wiki/File:Fruit%20Salad%20Or%20Fruit%20Bowl.jpg",
+      "downloadUrl": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Fruit%20Salad%20Or%20Fruit%20Bowl.jpg?width=2400",
+      "author": "Manjeshwari poet mysore",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "commonsOriginal": {
+        "width": 4000,
+        "height": 2411
+      },
+      "original": {
+        "sha256": "094572f3508de1bd07fb019202c0589fa4312fa89c0b8d5f895f900bed84b418",
+        "width": 3840,
+        "height": 2315,
+        "mimeType": "image/jpeg",
+        "bytes": 654352
+      },
+      "prepared": {
+        "conservative": {
+          "file": "prepared/conservative/fruit_bowl.jpg",
+          "sha256": "1930a64f5679fa529c7e344e44578b281cc746ca58ad3f2544b5d4b49c2af7e4",
+          "width": 1600,
+          "height": 965,
+          "mimeType": "image/jpeg",
+          "quality": 85,
+          "maxSidePx": 1600,
+          "bytes": 155503
+        },
+        "balanced": {
+          "file": "prepared/balanced/fruit_bowl.jpg",
+          "sha256": "7562957394afd4e00e8b105c4d20c0fb8a955ab809bd314eb3000cc1fc9ae6c9",
+          "width": 1280,
+          "height": 772,
+          "mimeType": "image/jpeg",
+          "quality": 75,
+          "maxSidePx": 1280,
+          "bytes": 76833
+        },
+        "aggressive": {
+          "file": "prepared/aggressive/fruit_bowl.jpg",
+          "sha256": "a9b01f993dc7cf0e05cd0f11ab8c9ae6c79541d86573a1e76c517a4a95cc9b1f",
+          "width": 960,
+          "height": 579,
+          "mimeType": "image/jpeg",
+          "quality": 65,
+          "maxSidePx": 960,
+          "bytes": 41308
+        },
+        "realistic": {
+          "file": "prepared/realistic/fruit_bowl.jpg",
+          "sha256": "9b83bd0cc31e4065013dc00c711ffa86c0d843d2c9cb2a4cd79453f2c1aed7e6",
+          "width": 2400,
+          "height": 1447,
+          "mimeType": "image/jpeg",
+          "quality": 90,
+          "maxSidePx": 2400,
+          "bytes": 411271
+        }
+      }
+    }
+  ],
+  "preparationProfiles": {
+    "conservative": {
+      "maxSidePx": 1600,
+      "quality": 85
+    },
+    "balanced": {
+      "maxSidePx": 1280,
+      "quality": 75
+    },
+    "aggressive": {
+      "maxSidePx": 960,
+      "quality": 65
+    },
+    "realistic": {
+      "maxSidePx": 2400,
+      "quality": 90
+    }
+  }
+}

@@ -27,3 +27,7 @@ release-secrets.local.env
 /tree_fitplan.txt
 /*fitplan*.png
 /nutrition_*.png
+
+# Reproducible public Gemini benchmark binaries (metadata and scripts stay tracked)
+/test-data/gemini-food-benchmark/originals/
+/test-data/gemini-food-benchmark/prepared/

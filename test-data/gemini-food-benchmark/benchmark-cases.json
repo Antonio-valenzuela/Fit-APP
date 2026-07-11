@@ -1,0 +1,28 @@
+{
+  "rubricVersion": "1.0",
+  "rubric": "Identification passes when foodName or ingredients contains an expected keyword. Plausibility passes when calories are within the deliberately broad case range. Quality passes only when both checks pass; this is a benchmark heuristic, not nutritional ground truth.",
+  "imageCases": {
+    "simple_apple": { "keywords": ["manzana", "apple"], "caloriesMin": 40, "caloriesMax": 220 },
+    "mexican_tacos": { "keywords": ["taco", "pastor"], "caloriesMin": 250, "caloriesMax": 1300 },
+    "mixed_salad": { "keywords": ["ensalada", "salad", "verdura"], "caloriesMin": 30, "caloriesMax": 900 },
+    "orange_juice": { "keywords": ["jugo", "zumo", "naranja", "orange"], "caloriesMin": 30, "caloriesMax": 350 },
+    "large_pizza": { "keywords": ["pizza", "margherita", "margarita"], "caloriesMin": 250, "caloriesMax": 1400 },
+    "ambiguous_stew": { "keywords": ["estofado", "guiso", "stew", "sopa"], "caloriesMin": 100, "caloriesMax": 1200 },
+    "empty_plate": { "keywords": ["no identificada", "vacío", "vacio", "restos"], "caloriesMin": 0, "caloriesMax": 60 },
+    "blurry_asparagus": { "keywords": ["espárrago", "esparrago", "asparagus"], "caloriesMin": 0, "caloriesMax": 350 },
+    "non_food_mug": { "keywords": ["no identificada", "no es comida", "taza", "mug"], "caloriesMin": 0, "caloriesMax": 30 },
+    "fruit_bowl": { "keywords": ["fruta", "fruit", "ensalada"], "caloriesMin": 30, "caloriesMax": 700 }
+  },
+  "textCases": [
+    { "id": "text_apple", "description": "Una manzana roja entera de aproximadamente 180 gramos.", "keywords": ["manzana", "apple"], "caloriesMin": 70, "caloriesMax": 130 },
+    { "id": "text_tacos", "description": "Tres tacos al pastor medianos con cebolla, cilantro, piña y tortillas de maíz.", "keywords": ["taco", "pastor"], "caloriesMin": 300, "caloriesMax": 900 },
+    { "id": "text_salad", "description": "Un plato mediano de ensalada con lechuga, tomate, pepino, zanahoria y una cucharada de aceite de oliva.", "keywords": ["ensalada", "salad"], "caloriesMin": 100, "caloriesMax": 500 },
+    { "id": "text_juice", "description": "Un vaso de 250 mililitros de jugo de naranja natural sin azúcar añadida.", "keywords": ["jugo", "zumo", "naranja", "orange"], "caloriesMin": 80, "caloriesMax": 180 },
+    { "id": "text_pizza", "description": "Dos rebanadas grandes de pizza Margherita con queso mozzarella, tomate y masa delgada.", "keywords": ["pizza", "margherita", "margarita"], "caloriesMin": 400, "caloriesMax": 1000 },
+    { "id": "text_stew", "description": "Un tazón de 450 gramos de estofado de res con papa, zanahoria y caldo.", "keywords": ["estofado", "guiso", "stew"], "caloriesMin": 250, "caloriesMax": 900 },
+    { "id": "text_empty", "description": "Un plato vacío sin comida ni bebida.", "keywords": ["no identificada", "vacío", "vacio", "sin comida"], "caloriesMin": 0, "caloriesMax": 10 },
+    { "id": "text_blurry", "description": "La descripción indica una porción pequeña de espárragos cocidos, pero no permite precisar aceite ni cantidad exacta.", "keywords": ["espárrago", "esparrago", "asparagus"], "caloriesMin": 10, "caloriesMax": 250 },
+    { "id": "text_non_food", "description": "Una taza de cerámica vacía que no contiene comida ni bebida.", "keywords": ["no identificada", "no es comida", "taza", "sin comida"], "caloriesMin": 0, "caloriesMax": 10 },
+    { "id": "text_fruit", "description": "Un tazón mediano con plátano, manzana, fresa, uva y papaya picados, sin crema ni azúcar.", "keywords": ["fruta", "fruit", "ensalada"], "caloriesMin": 100, "caloriesMax": 500 }
+  ]
+}

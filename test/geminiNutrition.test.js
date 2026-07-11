@@ -7,6 +7,7 @@ const {
   NUTRITION_SCHEMA,
   NutritionValidationError,
   buildGeminiRequest,
+  buildGeminiTextRequest,
   extractStructuredText,
   validateNutrition,
   parseNutritionEnvelope,
@@ -120,6 +121,15 @@ test('builds a strict structured request for the stable model configuration', ()
   assert.deepEqual(request.generationConfig.responseJsonSchema.required, NUTRITION_SCHEMA.required)
   assert.equal(request.contents.length, 1)
   assert.equal(request.contents[0].parts.filter(part => part.inline_data).length, 1)
+})
+
+test('builds a text-only nutrition request without an image part', () => {
+  const request = buildGeminiTextRequest('Una manzana roja de 180 g.', 'medium')
+
+  assert.equal(request.generationConfig.thinkingConfig.thinkingLevel, 'medium')
+  assert.equal(request.contents[0].parts.filter(part => part.inline_data).length, 0)
+  assert.equal(request.contents[0].parts.length, 1)
+  assert.match(request.contents[0].parts[0].text, /manzana roja de 180 g/)
 })
 
 test('classifies retryable provider statuses without guessing their cause', () => {
