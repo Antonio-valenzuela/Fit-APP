@@ -1,20 +1,25 @@
 package com.example.data.api
 
 import android.util.Log
-import android.util.Base64
 import com.example.BuildConfig
 import com.example.data.model.HealthLogEntity
 import com.example.data.model.UserEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
+import okhttp3.Response
 import org.json.JSONObject
-import java.io.InterruptedIOException
+import java.io.IOException
+import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 data class FoodImageEstimate(
     val name: String,
@@ -24,15 +29,17 @@ data class FoodImageEstimate(
     val fatG: Float,
     val portionEstimate: String,
     val confidence: String,
-    val notes: String
+    val notes: String,
+    val confidenceScore: Float = 0f,
+    val ingredients: List<String> = emptyList()
 )
 
 class GeminiService {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS)
-        .callTimeout(120, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(45, TimeUnit.SECONDS)
+        .callTimeout(45, TimeUnit.SECONDS)
         .build()
 
     private val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -107,10 +114,7 @@ class GeminiService {
         }
     }
 
-    suspend fun estimateFoodFromImage(
-        imageBytes: ByteArray,
-        mimeType: String = "image/jpeg"
-    ): Result<FoodImageEstimate> = withContext(Dispatchers.IO) {
+    suspend fun estimateFoodFromImage(image: GeminiImageRequest): Result<GeminiNutritionResult> = withContext(Dispatchers.IO) {
         val backendKey = BuildConfig.BACKEND_API_KEY
         if (backendKey.isEmpty() || backendKey == "YOUR_BACKEND_API_KEY_HERE" || backendKey.contains("placeholder", ignoreCase = true)) {
             return@withContext Result.failure(
@@ -118,126 +122,87 @@ class GeminiService {
             )
         }
 
-        val prompt = """
-            Analiza esta comida para un registro personal de nutricion.
-            Estima calorias y macronutrientes de forma aproximada.
-            Devuelve solo JSON valido, sin markdown:
-            {
-              "foodName": "string",
-              "calories": 0,
-              "protein": 0.0,
-              "carbs": 0.0,
-              "fat": 0.0,
-              "portionEstimate": "string",
-              "confidence": "high|medium|low",
-              "notes": "string"
-            }
-            Reglas:
-            - Las calorias y macros deben ser aproximados.
-            - Si hay varios alimentos, resumir como una comida.
-            - Si no reconoces comida, foodName debe ser "Comida no identificada", confidence "low" y valores 0.
-            - No incluyas markdown.
-            - No incluyas texto fuera del JSON.
-            Las cifras son estimaciones, no mediciones medicas.
-        """.trimIndent()
-
-        val imageB64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
-        Log.d("GeminiService", "Food image request: ${imageBytes.size} bytes, mime=$mimeType")
-        val jsonRequest = JSONObject().apply {
-            put("contents", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("parts", JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("inline_data", JSONObject().apply {
-                                put("mime_type", mimeType)
-                                put("data", imageB64)
-                            })
-                        })
-                        put(JSONObject().apply { put("text", prompt) })
-                    })
-                })
-            })
-            put("generationConfig", JSONObject().apply {
-                put("responseMimeType", "application/json")
-            })
-        }
+        val requestId = UUID.randomUUID().toString()
+        val jsonRequest = GeminiNutritionProtocol.buildRequestJson(image, requestId)
+        Log.i(
+            "GeminiMetrics",
+            "event=request_start requestId=$requestId originalBytes=${image.originalBytes} preparedBytes=${image.imageBytes.size} " +
+                "original=${image.originalWidth}x${image.originalHeight} prepared=${image.preparedWidth}x${image.preparedHeight} quality=${image.quality}"
+        )
 
         try {
-            val request = Request.Builder()
+            val httpRequest = Request.Builder()
                 .url(backendUrlVision)
                 .addHeader("Authorization", "Bearer $backendKey")
-                .post(jsonRequest.toString().toRequestBody(mediaType))
+                .post(jsonRequest.toRequestBody(mediaType))
                 .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val errorMsg = when (response.code) {
-                        503 -> "El servidor de IA de Gemini está temporalmente sobrecargado (Error 503). Por favor, introduce los datos manualmente o intenta en unos segundos."
-                        504, 502 -> "Tiempo de espera agotado en la red (Error ${response.code}). Por favor, intenta de nuevo."
-                        429 -> "Se ha superado el límite de solicitudes de IA (Error 429). Inténtalo más tarde."
-                        else -> "No se pudo conectar con la IA de Gemini (Código de error: ${response.code})."
-                    }
-                    return@withContext Result.failure(IllegalStateException(errorMsg))
-                }
+            client.newCall(httpRequest).awaitResponse().use { response ->
                 val responseBody = response.body?.string()
-                    ?: return@withContext Result.failure(IllegalStateException("Respuesta vacia de Gemini."))
-                val text = JSONObject(responseBody)
-                    .getJSONArray("candidates")
-                    .getJSONObject(0)
-                    .getJSONObject("content")
-                    .getJSONArray("parts")
-                    .getJSONObject(0)
-                    .getString("text")
-                    .trim()
-                    .removePrefix("```json")
-                    .removePrefix("```")
-                    .removeSuffix("```")
-                    .trim()
-                val parsed = JSONObject(extractJsonObject(text))
-                if (BuildConfig.DEBUG) {
-                    Log.d("GeminiService", "Food image parsed JSON: ${parsed.toString()}")
-                }
-                val confidence = parsed.optString("confidence", "low").lowercase()
-                    .takeIf { it in setOf("high", "medium", "low") } ?: "low"
-                val notes = parsed.optString("notes")
-                    .ifBlank { parsed.optString("confidenceNote", "Estimacion visual aproximada.") }
-                Result.success(
-                    FoodImageEstimate(
-                        name = parsed.optString("foodName")
-                            .ifBlank { parsed.optString("name", "Comida por foto") }
-                            .ifBlank { "Comida por foto" },
-                        calories = parsed.optInt("calories", 0).coerceAtLeast(0),
-                        proteinG = parsed.optDouble("protein", parsed.optDouble("proteinG", 0.0)).toFloat().coerceAtLeast(0f),
-                        carbsG = parsed.optDouble("carbs", parsed.optDouble("carbsG", 0.0)).toFloat().coerceAtLeast(0f),
-                        fatG = parsed.optDouble("fat", parsed.optDouble("fatG", 0.0)).toFloat().coerceAtLeast(0f),
-                        portionEstimate = parsed.optString("portionEstimate", "Porcion visual aproximada."),
-                        confidence = confidence,
-                        notes = notes.ifBlank { "Estimacion visual aproximada." }
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(
+                        IllegalStateException(friendlyBackendError(response.code, backendErrorCode(responseBody)))
                     )
+                }
+                val body = responseBody
+                    ?: return@withContext Result.failure(IllegalStateException("Gemini devolvio una respuesta vacia. Tus datos se conservaron."))
+                val parsed = GeminiNutritionProtocol.parseResponse(body)
+                Log.i(
+                    "GeminiMetrics",
+                    "event=request_complete requestId=${parsed.requestId} model=${parsed.modelVersion} " +
+                        "preprocessMs=${parsed.metrics.preprocessMs} providerMs=${parsed.metrics.providerMs} " +
+                        "parseMs=${parsed.metrics.parseMs} totalMs=${parsed.metrics.totalMs} " +
+                        "requestBytes=${parsed.metrics.requestBytes} attempt=${parsed.metrics.attempt} cacheHit=${parsed.metrics.cacheHit}"
                 )
+                Result.success(parsed)
             }
-        } catch (error: InterruptedIOException) {
-            Log.e("GeminiService", "Food image estimate timeout: ${error.message}", error)
-            Result.failure(IllegalStateException("Gemini tardo demasiado en analizar la foto. Intenta de nuevo con buena luz o una foto mas clara."))
+        } catch (error: GeminiProtocolException) {
+            Log.w("GeminiService", "Food image response rejected: code=${error.code} field=${error.field}")
+            Result.failure(IllegalStateException(error.userMessage))
+        } catch (error: IOException) {
+            Log.w("GeminiService", "Food image network failure: ${error.javaClass.simpleName}")
+            Result.failure(IllegalStateException("El analisis tardo demasiado o se interrumpio. Tus datos se conservaron para reintentar."))
         } catch (error: Exception) {
-            // Re-throw CancellationException to respect structured concurrency
             if (error is kotlinx.coroutines.CancellationException) throw error
-            Log.e("GeminiService", "Food image estimate error: ${error.message}", error)
-            Result.failure(IllegalStateException("No se pudo analizar la comida. Revisa tu conexión o intenta de nuevo."))
+            Log.e("GeminiService", "Food image estimate failure: ${error.javaClass.simpleName}")
+            Result.failure(IllegalStateException("No se pudo analizar la comida. Tus datos se conservaron para reintentar o registrar manualmente."))
         }
     }
 
-    private fun extractJsonObject(text: String): String {
-        val cleaned = text
-            .trim()
-            .removePrefix("```json")
-            .removePrefix("```")
-            .removeSuffix("```")
-            .trim()
-        if (cleaned.startsWith("{") && cleaned.endsWith("}")) return cleaned
-        val start = cleaned.indexOf('{')
-        val end = cleaned.lastIndexOf('}')
-        if (start >= 0 && end > start) return cleaned.substring(start, end + 1)
-        throw IllegalArgumentException("La IA no devolvio JSON valido.")
+    private fun backendErrorCode(body: String?): String? = runCatching {
+        body?.let { JSONObject(it).optString("code").takeIf(String::isNotBlank) }
+    }.getOrNull()
+
+    private fun friendlyBackendError(status: Int, code: String?): String = when (code) {
+        "PROVIDER_UNAVAILABLE", "CIRCUIT_OPEN" ->
+            "Gemini esta temporalmente ocupado. Tus datos se conservaron; reintenta o usa el registro manual/local."
+        "PROVIDER_TIMEOUT" ->
+            "El analisis tardo demasiado. Tus datos se conservaron para reintentar o registrar manualmente."
+        "PROVIDER_RATE_LIMIT" ->
+            "Se alcanzo el limite temporal de analisis. Tus datos se conservaron; intenta mas tarde."
+        "CONCURRENT_REQUEST" ->
+            "Ya hay un analisis en curso. Espera el resultado o cancelalo antes de iniciar otro."
+        "INVALID_NUTRITION_RESULT" ->
+            "Gemini devolvio un resultado invalido. Revisa los datos o registra la comida manualmente."
+        else -> when (status) {
+            413 -> "La imagen es demasiado grande. Usa una foto mas pequena."
+            429 -> "Se alcanzo el limite temporal de analisis. Intenta mas tarde."
+            503 -> "Gemini esta temporalmente ocupado. Tus datos se conservaron para reintentar."
+            504 -> "El analisis tardo demasiado. Tus datos se conservaron para reintentar."
+            else -> "No fue posible completar el analisis. Tus datos se conservaron."
+        }
+    }
+
+    private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (!continuation.isCancelled) continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                continuation.resume(response) { _, value, _ -> value.close() }
+            }
+        })
     }
 }

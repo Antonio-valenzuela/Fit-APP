@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -57,6 +60,8 @@ import com.example.ui.theme.frostedMeshBackground
 import com.example.ui.theme.glassCard
 import com.example.ui.viewmodel.FitPlanViewModel
 import com.example.data.model.UserDiscipline
+import com.example.data.api.GeminiImageRequest
+import com.example.ui.nutrition.GeminiFoodPhase
 
 @Composable
 fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
@@ -70,40 +75,66 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val todayHealth by viewModel.todayHealthLogs.collectAsStateWithLifecycle()
     val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
+    val geminiState by viewModel.geminiFoodUiState.collectAsStateWithLifecycle()
     val discipline = remember(user?.trainingDiscipline) { UserDiscipline.fromStoredName(user?.trainingDiscipline) }
     val context = LocalContext.current
 
-    var showDialog by remember { mutableStateOf(false) }
-    var foodName by remember { mutableStateOf("") }
-    var caloriesStr by remember { mutableStateOf("") }
-    var proteinStr by remember { mutableStateOf("") }
-    var carbsStr by remember { mutableStateOf("") }
-    var fatStr by remember { mutableStateOf("") }
-    var selectedMealType by remember { mutableStateOf("Desayuno") }
-    var selectedPortion by remember { mutableStateOf("Plato") }
-    var quickNote by remember { mutableStateOf("") }
-    var saveAsFavorite by remember { mutableStateOf(false) }
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+    var foodName by rememberSaveable { mutableStateOf("") }
+    var caloriesStr by rememberSaveable { mutableStateOf("") }
+    var proteinStr by rememberSaveable { mutableStateOf("") }
+    var carbsStr by rememberSaveable { mutableStateOf("") }
+    var fatStr by rememberSaveable { mutableStateOf("") }
+    var selectedMealType by rememberSaveable { mutableStateOf("Desayuno") }
+    var selectedPortion by rememberSaveable { mutableStateOf("Plato") }
+    var quickNote by rememberSaveable { mutableStateOf("") }
+    var saveAsFavorite by rememberSaveable { mutableStateOf(false) }
     var showFavoritePicker by remember { mutableStateOf(false) }
     var showFrequentPicker by remember { mutableStateOf(false) }
     var showBarcodeDialog by remember { mutableStateOf(false) }
-    var barcodeStr by remember { mutableStateOf("") }
+    var barcodeStr by rememberSaveable { mutableStateOf("") }
     var ocrLoading by remember { mutableStateOf(false) }
     var ocrStatus by remember { mutableStateOf<String?>(null) }
     var nutritionLabelPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var parsedNutritionLabel by remember { mutableStateOf<ParsedNutritionLabel?>(null) }
     var showOcrReviewDialog by remember { mutableStateOf(false) }
-    var aiLoading by remember { mutableStateOf(false) }
-    var aiStatus by remember { mutableStateOf<String?>(null) }
-    var capturedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val aiLoading = geminiState.isLoading
+    var aiStatus by rememberSaveable { mutableStateOf<String?>(null) }
+    var capturedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var capturedPreview by remember { mutableStateOf<Bitmap?>(null) }
-    var lastPreparedImage by remember { mutableStateOf<PreparedFoodImage?>(null) }
-    var pendingGeminiImage by remember { mutableStateOf<PreparedFoodImage?>(null) }
-    // Job references to cancel in-flight Gemini/OCR coroutines and prevent duplicate calls
-    var geminiJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    // OCR remains screen-scoped; Gemini work lives in the ViewModel to survive recreation.
     var ocrJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    var showGeminiConsentDialog by remember { mutableStateOf(false) }
-    var geminiConsentChecked by remember { mutableStateOf(false) }
+    var showGeminiConsentDialog by rememberSaveable { mutableStateOf(false) }
+    var geminiConsentChecked by rememberSaveable { mutableStateOf(false) }
     var showGeminiPremiumDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(geminiState.phase) {
+        if (geminiState.phase == GeminiFoodPhase.AWAITING_CONSENT) {
+            showGeminiConsentDialog = true
+        }
+    }
+    LaunchedEffect(geminiState.message) {
+        geminiState.message?.let { aiStatus = it }
+    }
+    LaunchedEffect(geminiState.request) {
+        val bytes = geminiState.request?.imageBytes
+        if (capturedPreview == null && bytes != null && bytes.isNotEmpty()) {
+            capturedPreview = withContext(Dispatchers.Default) {
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }
+        }
+    }
+    LaunchedEffect(geminiState.estimate) {
+        geminiState.estimate?.let { estimate ->
+            foodName = estimate.name
+            caloriesStr = estimate.calories.takeIf { it > 0 }?.toString() ?: ""
+            proteinStr = estimate.proteinG.takeIf { it > 0f }?.cleanMacro() ?: ""
+            carbsStr = estimate.carbsG.takeIf { it > 0f }?.cleanMacro() ?: ""
+            fatStr = estimate.fatG.takeIf { it > 0f }?.cleanMacro() ?: ""
+            selectedPortion = "Porcion"
+            quickNote = "${estimate.portionEstimate}. Confianza: ${estimate.confidenceScore.cleanConfidence()}. ${estimate.notes}"
+        }
+    }
 
     val todayDateKey = remember { com.example.data.repository.LocalDateUtils.getTodayString() }
     val todayStart = remember(todayDateKey) { nutritionStartOfTodayMillis() }
@@ -138,40 +169,8 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 
-    fun analyzePreparedImage(prepared: PreparedFoodImage) {
-        // Cancel any in-flight Gemini request before starting a new one
-        geminiJob?.cancel()
-        aiLoading = true
-        aiStatus = "Analizando comida con Gemini... puede tardar unos segundos."
-        geminiJob = scope.launch {
-            val result = viewModel.estimateMealFromPhoto(prepared.bytes, "image/jpeg")
-            aiLoading = false
-            result
-                .onSuccess { estimate ->
-                    foodName = estimate.name
-                    caloriesStr = estimate.calories.takeIf { it > 0 }?.toString() ?: ""
-                    proteinStr = estimate.proteinG.takeIf { it > 0f }?.cleanMacro() ?: ""
-                    carbsStr = estimate.carbsG.takeIf { it > 0f }?.cleanMacro() ?: ""
-                    fatStr = estimate.fatG.takeIf { it > 0f }?.cleanMacro() ?: ""
-                    // Use "Porcion" (no accent) to match FoodDiaryRules.visualPortions list exactly
-                    selectedPortion = "Porcion"
-                    quickNote = "${estimate.portionEstimate}. Confianza: ${estimate.confidence}. ${estimate.notes}"
-                    aiStatus = if (estimate.name.equals("Comida no identificada", ignoreCase = true) || estimate.confidence == "low") {
-                        "No pudimos identificar bien la comida. Puedes editar o registrar manualmente."
-                    } else {
-                        "Comida detectada: ${estimate.name} - ${estimate.calories} kcal. Revisa los campos y toca Guardar."
-                    }
-                }
-                .onFailure { error ->
-                    val message = error.localizedMessage ?: "No se pudo analizar la foto."
-                    aiStatus = message
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                }
-        }
-    }
-
     fun requestGeminiConsent(prepared: PreparedFoodImage) {
-        pendingGeminiImage = prepared
+        viewModel.prepareGeminiFood(prepared.toGeminiImageRequest(), foodName)
         geminiConsentChecked = false
         showGeminiConsentDialog = true
         aiStatus = "Imagen lista: ${prepared.width}x${prepared.height}, ${prepared.bytes.size / 1024} KB. Confirma antes de enviarla a Gemini."
@@ -190,11 +189,9 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             runCatching {
                 withContext(Dispatchers.IO) { prepareFoodImage(context, uri) }
             }.onSuccess { prepared ->
-                lastPreparedImage = prepared
                 capturedPreview = prepared.preview
                 requestGeminiConsent(prepared)
             }.onFailure { error ->
-                aiLoading = false
                 aiStatus = error.localizedMessage ?: "No se pudo leer la foto."
             }
         }
@@ -322,22 +319,21 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             showGeminiPremiumDialog = true
             return
         }
-        val prepared = lastPreparedImage
-        if (prepared == null) {
+        if (geminiState.request == null) {
             aiStatus = "Primero toma una foto valida."
         } else {
-            requestGeminiConsent(prepared)
+            geminiConsentChecked = false
+            showGeminiConsentDialog = true
+            aiStatus = "La imagen preparada sigue disponible. Confirma para volver a enviarla."
         }
     }
 
     fun resetAiCapture() {
-        aiLoading = false
+        viewModel.resetGeminiFoodForManual()
         aiStatus = "Registro manual activo. Puedes escribir los datos."
         capturedPhotoUri = null
         capturedPreview?.recycle()
         capturedPreview = null
-        lastPreparedImage = null
-        pendingGeminiImage = null
         showGeminiConsentDialog = false
         geminiConsentChecked = false
     }
@@ -616,7 +612,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     ) {
                         OutlinedButton(
                             onClick = { retryAnalysis() },
-                            enabled = !aiLoading && lastPreparedImage != null,
+                            enabled = geminiState.canRetry,
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
@@ -624,17 +620,48 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                             Text("Otra vez")
                         }
                         TextButton(
-                            onClick = { resetAiCapture() },
-                            enabled = !aiLoading,
+                            onClick = {
+                                if (aiLoading) {
+                                    viewModel.cancelGeminiFoodAnalysis()
+                                } else {
+                                    resetAiCapture()
+                                }
+                            },
+                            enabled = true,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("Manual")
+                            Text(if (aiLoading) "Cancelar" else "Manual")
                         }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val local = viewModel.estimateFoodLocally(foodName)
+                            if (local == null) {
+                                aiStatus = "Escribe el nombre exacto de un alimento guardado o completa el registro manualmente."
+                            } else {
+                                foodName = local.name
+                                caloriesStr = local.calories.toString()
+                                proteinStr = local.proteinG.cleanMacro()
+                                carbsStr = local.carbsG.cleanMacro()
+                                fatStr = local.fatG.cleanMacro()
+                                selectedPortion = local.portionEstimate
+                                quickNote = local.notes
+                                aiStatus = "Estimacion local aplicada sin enviar la imagen. Revisa los campos antes de guardar."
+                            }
+                        },
+                        enabled = !aiLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Usar estimacion local")
                     }
 
                     OutlinedTextField(
                         value = foodName,
-                        onValueChange = { foodName = it },
+                        onValueChange = {
+                            foodName = it
+                            viewModel.updateGeminiFoodDescription(it)
+                        },
                         label = { Text("Alimento o platillo") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
@@ -759,7 +786,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                                     aiStatus = null
                                     capturedPhotoUri = null
                                     capturedPreview = null
-                                    lastPreparedImage = null
+                                    viewModel.resetGeminiFoodForManual()
                                 }
                             },
                             modifier = Modifier.testTag("save_meal_button")
@@ -803,7 +830,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             onDismissRequest = {
                 showGeminiConsentDialog = false
                 geminiConsentChecked = false
-                pendingGeminiImage = null
+                viewModel.cancelGeminiFoodAnalysis()
                 aiStatus = "Envio a Gemini cancelado. Puedes registrar la comida manualmente."
             },
             icon = { Icon(Icons.Default.PrivacyTip, contentDescription = null) },
@@ -828,13 +855,11 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             },
             confirmButton = {
                 Button(
-                    enabled = geminiConsentChecked && pendingGeminiImage != null,
+                    enabled = geminiConsentChecked && geminiState.request != null,
                     onClick = {
-                        val prepared = pendingGeminiImage ?: return@Button
                         showGeminiConsentDialog = false
                         geminiConsentChecked = false
-                        pendingGeminiImage = null
-                        analyzePreparedImage(prepared)
+                        viewModel.analyzePreparedGeminiFood()
                     }
                 ) {
                     Text("Enviar a Gemini")
@@ -845,7 +870,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     onClick = {
                         showGeminiConsentDialog = false
                         geminiConsentChecked = false
-                        pendingGeminiImage = null
+                        viewModel.cancelGeminiFoodAnalysis()
                         aiStatus = "Envio a Gemini cancelado. Puedes registrar la comida manualmente."
                     }
                 ) {
@@ -1261,14 +1286,37 @@ private fun portionFactor(portion: String): Float = when (portion) {
     else -> 1.1f
 }
 
-private const val FOOD_IMAGE_MAX_SIDE_PX = 1024
-private const val FOOD_IMAGE_JPEG_QUALITY = 75
+private const val FOOD_IMAGE_MAX_OUTPUT_BYTES = 4 * 1024 * 1024
+
+internal data class FoodImageProfile(
+    val id: String,
+    val maxSidePx: Int,
+    val jpegQuality: Int,
+    val maxOutputBytes: Int = FOOD_IMAGE_MAX_OUTPUT_BYTES
+) {
+    init {
+        require(id.isNotBlank())
+        require(maxSidePx > 0)
+        require(jpegQuality in 1..100)
+        require(maxOutputBytes > 0)
+    }
+}
+
+internal val CONSERVATIVE_FOOD_IMAGE_PROFILE = FoodImageProfile("conservative", 1600, 85)
+internal val BALANCED_FOOD_IMAGE_PROFILE = FoodImageProfile("balanced", 1280, 75)
+internal val AGGRESSIVE_FOOD_IMAGE_PROFILE = FoodImageProfile("aggressive", 960, 65)
 
 internal data class PreparedFoodImage(
     val bytes: ByteArray,
     val width: Int,
     val height: Int,
-    val preview: Bitmap
+    val preview: Bitmap,
+    val originalBytes: Int,
+    val originalWidth: Int,
+    val originalHeight: Int,
+    val quality: Int,
+    val profileId: String,
+    val mimeType: String = "image/jpeg"
 )
 
 internal object GeminiNutritionConsent {
@@ -1276,46 +1324,149 @@ internal object GeminiNutritionConsent {
         "Al continuar, aceptas enviar esta imagen/datos a Gemini para analisis. FitPlan no sustituye diagnóstico médico."
 }
 
-internal fun prepareFoodImage(context: Context, uri: Uri): PreparedFoodImage {
-    val original = context.contentResolver.openInputStream(uri)?.use { input ->
-        BitmapFactory.decodeStream(input)
+internal fun prepareFoodImage(
+    context: Context,
+    uri: Uri,
+    profile: FoodImageProfile = BALANCED_FOOD_IMAGE_PROFILE
+): PreparedFoodImage {
+    val originalBytes = contentLength(context, uri)
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use { input ->
+        BitmapFactory.decodeStream(input, null, bounds)
     } ?: throw IllegalStateException("No se pudo leer la foto tomada.")
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+        throw IllegalStateException("La foto no contiene dimensiones validas.")
+    }
 
-    val longestSide = max(original.width, original.height).coerceAtLeast(1)
-    val scale = if (longestSide > FOOD_IMAGE_MAX_SIDE_PX) {
-        FOOD_IMAGE_MAX_SIDE_PX.toFloat() / longestSide.toFloat()
+    val orientation = context.contentResolver.openInputStream(uri)?.use { input ->
+        runCatching {
+            ExifInterface(input).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+    } ?: ExifInterface.ORIENTATION_NORMAL
+
+    val decodeOptions = BitmapFactory.Options().apply {
+        inSampleSize = calculateDecodeSample(bounds.outWidth, bounds.outHeight, profile.maxSidePx)
+    }
+    val decoded = context.contentResolver.openInputStream(uri)?.use { input ->
+        BitmapFactory.decodeStream(input, null, decodeOptions)
+    } ?: throw IllegalStateException("No se pudo decodificar la foto tomada.")
+    val oriented = applyExifOrientation(decoded, orientation)
+    if (oriented !== decoded) decoded.recycle()
+
+    val originalWidth = if (orientationSwapsDimensions(orientation)) bounds.outHeight else bounds.outWidth
+    val originalHeight = if (orientationSwapsDimensions(orientation)) bounds.outWidth else bounds.outHeight
+    val longestSide = max(oriented.width, oriented.height).coerceAtLeast(1)
+    val scale = if (longestSide > profile.maxSidePx) {
+        profile.maxSidePx.toFloat() / longestSide.toFloat()
     } else {
         1f
     }
-    val targetWidth = (original.width * scale).roundToInt().coerceAtLeast(1)
-    val targetHeight = (original.height * scale).roundToInt().coerceAtLeast(1)
-    val resized = if (targetWidth != original.width || targetHeight != original.height) {
-        Bitmap.createScaledBitmap(original, targetWidth, targetHeight, true)
+    val targetWidth = (oriented.width * scale).roundToInt().coerceAtLeast(1)
+    val targetHeight = (oriented.height * scale).roundToInt().coerceAtLeast(1)
+    val resized = if (targetWidth != oriented.width || targetHeight != oriented.height) {
+        Bitmap.createScaledBitmap(oriented, targetWidth, targetHeight, true)
     } else {
-        original
+        oriented
     }
-    if (resized !== original) {
-        original.recycle()
-    }
+    if (resized !== oriented) oriented.recycle()
 
     val bytes = ByteArrayOutputStream().use { output ->
-        val compressed = resized.compress(Bitmap.CompressFormat.JPEG, FOOD_IMAGE_JPEG_QUALITY, output)
+        val compressed = resized.compress(Bitmap.CompressFormat.JPEG, profile.jpegQuality, output)
         if (!compressed) throw IllegalStateException("No se pudo comprimir la foto.")
         output.toByteArray()
     }
     if (bytes.isEmpty()) throw IllegalStateException("La foto comprimida quedo vacia.")
+    if (bytes.size > profile.maxOutputBytes) {
+        resized.recycle()
+        throw IllegalStateException("La foto preparada es demasiado grande. Elige una imagen mas pequena.")
+    }
 
     Log.d(
         "NutritionScreen",
-        "Food photo prepared: sent=${resized.width}x${resized.height}, bytes=${bytes.size}, quality=$FOOD_IMAGE_JPEG_QUALITY"
+        "Food photo prepared: profile=${profile.id}, original=${originalWidth}x${originalHeight}, " +
+            "originalBytes=$originalBytes, sent=${resized.width}x${resized.height}, bytes=${bytes.size}, quality=${profile.jpegQuality}"
     )
     return PreparedFoodImage(
         bytes = bytes,
         width = resized.width,
         height = resized.height,
-        preview = resized
+        preview = resized,
+        originalBytes = originalBytes,
+        originalWidth = originalWidth,
+        originalHeight = originalHeight,
+        quality = profile.jpegQuality,
+        profileId = profile.id
     )
 }
+
+private fun contentLength(context: Context, uri: Uri): Int {
+    val descriptorLength = runCatching {
+        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length }
+    }.getOrNull()?.takeIf { it in 1..Int.MAX_VALUE }?.toInt()
+    if (descriptorLength != null) return descriptorLength
+
+    return context.contentResolver.openInputStream(uri)?.use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > Int.MAX_VALUE) throw IllegalStateException("La foto original es demasiado grande.")
+        }
+        total.toInt()
+    } ?: throw IllegalStateException("No se pudo medir la foto tomada.")
+}
+
+private fun calculateDecodeSample(width: Int, height: Int, maxSidePx: Int): Int {
+    var sample = 1
+    while (max(width, height) / (sample * 2) >= maxSidePx) sample *= 2
+    return sample
+}
+
+private fun orientationSwapsDimensions(orientation: Int): Boolean = orientation in setOf(
+    ExifInterface.ORIENTATION_TRANSPOSE,
+    ExifInterface.ORIENTATION_ROTATE_90,
+    ExifInterface.ORIENTATION_TRANSVERSE,
+    ExifInterface.ORIENTATION_ROTATE_270
+)
+
+internal fun applyExifOrientation(bitmap: Bitmap, orientation: Int): Bitmap {
+    val matrix = Matrix()
+    when (orientation) {
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> {
+            matrix.setRotate(90f)
+            matrix.postScale(-1f, 1f)
+        }
+        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+        ExifInterface.ORIENTATION_TRANSVERSE -> {
+            matrix.setRotate(-90f)
+            matrix.postScale(-1f, 1f)
+        }
+        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+        else -> return bitmap
+    }
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+}
+
+private fun PreparedFoodImage.toGeminiImageRequest(): GeminiImageRequest = GeminiImageRequest(
+    imageBytes = bytes,
+    mimeType = mimeType,
+    originalBytes = originalBytes,
+    originalWidth = originalWidth,
+    originalHeight = originalHeight,
+    preparedWidth = width,
+    preparedHeight = height,
+    quality = quality
+)
+
+private fun Float.cleanConfidence(): String = "%.0f%%".format(Locale.US, this.coerceIn(0f, 1f) * 100f)
 
 private fun Float.cleanMacro(): String {
     return if (this % 1f == 0f) toInt().toString() else "%.1f".format(Locale.US, this)

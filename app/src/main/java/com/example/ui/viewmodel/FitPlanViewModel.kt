@@ -7,6 +7,7 @@ import com.example.BuildConfig
 import com.example.data.api.FoodImageEstimate
 import com.example.data.analytics.ProductAnalytics
 import com.example.data.api.GeminiService
+import com.example.data.api.GeminiImageRequest
 import com.example.data.local.AppDatabase
 import com.example.data.local.PreferencesManager
 import com.example.data.model.ActivitySessionEntity
@@ -28,6 +29,8 @@ import com.example.data.model.WellnessEntryType
 import com.example.data.model.WorkoutLogEntity
 import com.example.data.repository.LocalDateUtils
 import com.example.data.model.FeatureSettings
+import com.example.ui.nutrition.GeminiFoodStateReducer
+import com.example.ui.nutrition.GeminiFoodUiState
 import com.example.data.model.HybridPlanSettings
 import com.example.data.model.AppPerformanceMode
 import com.example.data.model.PerformanceUserPreferences
@@ -177,6 +180,10 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     private var alertsJob: kotlinx.coroutines.Job? = null
     private var habitsJob: kotlinx.coroutines.Job? = null
     private var fitCoreJob: kotlinx.coroutines.Job? = null
+    private var geminiFoodJob: kotlinx.coroutines.Job? = null
+
+    private val _geminiFoodUiState = MutableStateFlow(GeminiFoodUiState())
+    val geminiFoodUiState: StateFlow<GeminiFoodUiState> = _geminiFoodUiState.asStateFlow()
 
     init {
         // Preload user data if logged in but empty in DB
@@ -384,8 +391,77 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    suspend fun estimateMealFromPhoto(imageBytes: ByteArray, mimeType: String = "image/jpeg"): Result<FoodImageEstimate> {
-        return geminiService.estimateFoodFromImage(imageBytes, mimeType)
+    suspend fun estimateMealFromPhoto(image: GeminiImageRequest): Result<FoodImageEstimate> {
+        return geminiService.estimateFoodFromImage(image).map { it.estimate }
+    }
+
+    fun prepareGeminiFood(image: GeminiImageRequest, description: String = _geminiFoodUiState.value.description) {
+        geminiFoodJob?.cancel()
+        _geminiFoodUiState.value = GeminiFoodStateReducer.prepared(
+            GeminiFoodStateReducer.updateDescription(_geminiFoodUiState.value, description),
+            image
+        )
+    }
+
+    fun analyzePreparedGeminiFood() {
+        val current = _geminiFoodUiState.value
+        val loading = GeminiFoodStateReducer.start(current)
+        if (loading === current) return
+        val request = loading.request ?: return
+        _geminiFoodUiState.value = loading
+        geminiFoodJob?.cancel()
+        geminiFoodJob = viewModelScope.launch {
+            geminiService.estimateFoodFromImage(request)
+                .onSuccess { result ->
+                    _geminiFoodUiState.value = GeminiFoodStateReducer.success(
+                        _geminiFoodUiState.value,
+                        result.estimate
+                    )
+                }
+                .onFailure { error ->
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    _geminiFoodUiState.value = GeminiFoodStateReducer.failure(
+                        _geminiFoodUiState.value,
+                        error.localizedMessage ?: "No se pudo analizar la foto. Tus datos se conservaron."
+                    )
+                }
+        }
+    }
+
+    fun cancelGeminiFoodAnalysis() {
+        geminiFoodJob?.cancel()
+        geminiFoodJob = null
+        _geminiFoodUiState.value = GeminiFoodStateReducer.cancel(_geminiFoodUiState.value)
+    }
+
+    fun resetGeminiFoodForManual() {
+        geminiFoodJob?.cancel()
+        geminiFoodJob = null
+        _geminiFoodUiState.value = GeminiFoodStateReducer.resetForManual(_geminiFoodUiState.value)
+    }
+
+    fun updateGeminiFoodDescription(description: String) {
+        _geminiFoodUiState.value = GeminiFoodStateReducer.updateDescription(_geminiFoodUiState.value, description)
+    }
+
+    fun estimateFoodLocally(foodName: String): FoodImageEstimate? {
+        val query = foodName.trim()
+        if (query.isBlank()) return null
+        val match = allFoodItems.value.firstOrNull { item ->
+            item.name.equals(query, ignoreCase = true)
+        } ?: return null
+        return FoodImageEstimate(
+            name = match.name,
+            calories = match.caloriesPerServing.coerceAtLeast(0),
+            proteinG = match.proteinGrams.coerceAtLeast(0f),
+            carbsG = match.carbsGrams.coerceAtLeast(0f),
+            fatG = match.fatGrams.coerceAtLeast(0f),
+            portionEstimate = match.servingLabel.ifBlank { "Porcion local guardada" },
+            confidence = "local",
+            notes = "Estimacion local basada en un alimento guardado; no se envio ninguna imagen.",
+            confidenceScore = 1f,
+            ingredients = emptyList()
+        )
     }
 
     fun removeMealLog(log: FoodLogEntity) {
