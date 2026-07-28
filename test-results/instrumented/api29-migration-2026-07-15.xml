@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="2" failures="0" errors="0" skipped="0" time="1.997" timestamp="2026-07-15T20:32:58" hostname="localhost">
+  <testsuite name="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="0.437" timestamp="2026-07-15T20:32:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="migration10To11PreservesSentinelRowsAndCreatesAllCatalogTables" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="0.373" />
+    <testcase name="searchIndexFollowsContentEntityForInsertUpdateDeleteAndRebuild" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="0.064" />
+  </testsuite>
+</testsuites>

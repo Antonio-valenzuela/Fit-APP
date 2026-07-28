@@ -191,7 +191,6 @@ async function getExerciseMuscleMap(exerciseName) {
 
   if (rows.length > 0) return rows
 
-  console.warn(`[muscleService] Ejercicio sin mapeo: ${exerciseName}. Se usa abdomen como fallback.`)
   await db.query(
     `INSERT IGNORE INTO exercise_muscle_map
        (exercise_name, muscle_group, activation_pct, is_primary)

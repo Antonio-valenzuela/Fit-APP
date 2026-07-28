@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.FoodLogEntity
@@ -18,6 +19,13 @@ import com.example.data.model.DailyActivityEntity
 import com.example.data.model.StreakEntity
 import com.example.data.model.DailyMissionEntity
 import com.example.data.model.AchievementEntity
+import com.example.data.model.ExerciseCatalogEntity
+import com.example.data.model.ExerciseCatalogFtsEntity
+import com.example.data.model.ExerciseCatalogImportEntity
+import com.example.data.model.ExerciseEquipmentRequirementEntity
+import com.example.data.model.ExerciseSearchContentEntity
+import com.example.data.model.ExerciseSecondaryMuscleEntity
+import com.example.data.model.ExerciseSourceMappingEntity
 
 @Database(
     entities = [
@@ -31,11 +39,19 @@ import com.example.data.model.AchievementEntity
         DailyActivityEntity::class,
         StreakEntity::class,
         DailyMissionEntity::class,
-        AchievementEntity::class
+        AchievementEntity::class,
+        ExerciseCatalogEntity::class,
+        ExerciseSourceMappingEntity::class,
+        ExerciseSecondaryMuscleEntity::class,
+        ExerciseEquipmentRequirementEntity::class,
+        ExerciseSearchContentEntity::class,
+        ExerciseCatalogFtsEntity::class,
+        ExerciseCatalogImportEntity::class
     ],
-    version = 10,
-    exportSchema = false
+    version = 12,
+    exportSchema = true
 )
+@TypeConverters(ExerciseCatalogConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun foodDao(): FoodDao
@@ -48,6 +64,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun streakDao(): StreakDao
     abstract fun dailyMissionDao(): DailyMissionDao
     abstract fun achievementDao(): AchievementDao
+    abstract fun accountDataDao(): AccountDataDao
+    abstract fun exerciseCatalogDao(): ExerciseCatalogDao
 
     companion object {
         @Volatile
@@ -60,7 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitplan_mx_database"
                 )
-                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .build()
                 INSTANCE = instance
                 instance
@@ -210,6 +228,151 @@ abstract class AppDatabase : RoomDatabase() {
                 addColumnIfMissing(db, "food_items", "fiberGrams", "REAL")
                 addColumnIfMissing(db, "food_items", "sugarGrams", "REAL")
                 addColumnIfMissing(db, "food_items", "sodiumMg", "REAL")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_catalog` (
+                        `rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `catalogId` TEXT NOT NULL,
+                        `nameEs` TEXT,
+                        `nameEn` TEXT,
+                        `normalizedName` TEXT NOT NULL,
+                        `instructionsEs` TEXT,
+                        `instructionsEn` TEXT,
+                        `primaryMuscle` TEXT NOT NULL,
+                        `bodyRegion` TEXT NOT NULL,
+                        `primaryEquipmentType` TEXT NOT NULL,
+                        `locationCompatibility` TEXT NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_exercise_catalog_catalogId` ON `exercise_catalog` (`catalogId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_catalog_normalizedName` ON `exercise_catalog` (`normalizedName`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_catalog_primaryMuscle` ON `exercise_catalog` (`primaryMuscle`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_catalog_bodyRegion` ON `exercise_catalog` (`bodyRegion`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_catalog_primaryEquipmentType` ON `exercise_catalog` (`primaryEquipmentType`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_catalog_locationCompatibility` ON `exercise_catalog` (`locationCompatibility`)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_source_mappings` (
+                        `source` TEXT NOT NULL,
+                        `sourceOriginalId` TEXT NOT NULL,
+                        `catalogId` TEXT,
+                        `importStatus` TEXT NOT NULL,
+                        `importVersion` TEXT NOT NULL,
+                        `normalizationRulesVersion` TEXT NOT NULL,
+                        PRIMARY KEY(`source`, `sourceOriginalId`),
+                        FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE NO ACTION
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_catalogId` ON `exercise_source_mappings` (`catalogId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_importStatus` ON `exercise_source_mappings` (`importStatus`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_source_importVersion` ON `exercise_source_mappings` (`source`, `importVersion`)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_secondary_muscles` (
+                        `catalogId` TEXT NOT NULL,
+                        `muscle` TEXT NOT NULL,
+                        PRIMARY KEY(`catalogId`, `muscle`),
+                        FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_secondary_muscles_muscle` ON `exercise_secondary_muscles` (`muscle`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_secondary_muscles_catalogId` ON `exercise_secondary_muscles` (`catalogId`)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_equipment_requirements` (
+                        `catalogId` TEXT NOT NULL,
+                        `equipmentType` TEXT NOT NULL,
+                        PRIMARY KEY(`catalogId`, `equipmentType`),
+                        FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_equipment_requirements_equipmentType` ON `exercise_equipment_requirements` (`equipmentType`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_exercise_equipment_requirements_catalogId` ON `exercise_equipment_requirements` (`catalogId`)")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_search_content` (
+                        `rowid` INTEGER NOT NULL,
+                        `nameEs` TEXT,
+                        `nameEn` TEXT,
+                        `normalizedName` TEXT NOT NULL,
+                        `aliases` TEXT NOT NULL,
+                        PRIMARY KEY(`rowid`),
+                        FOREIGN KEY(`rowid`) REFERENCES `exercise_catalog`(`rowId`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `exercise_catalog_fts` USING FTS4(`nameEs` TEXT, `nameEn` TEXT, `normalizedName` TEXT NOT NULL, `aliases` TEXT NOT NULL, content=`exercise_search_content`)")
+                // These are Room's generated external-content synchronization triggers.
+                // They are part of the exported v11 schema, not a second FTS strategy.
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_BEFORE_UPDATE BEFORE UPDATE ON `exercise_search_content` BEGIN DELETE FROM `exercise_catalog_fts` WHERE `docid`=OLD.`rowid`; END")
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_BEFORE_DELETE BEFORE DELETE ON `exercise_search_content` BEGIN DELETE FROM `exercise_catalog_fts` WHERE `docid`=OLD.`rowid`; END")
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_AFTER_UPDATE AFTER UPDATE ON `exercise_search_content` BEGIN INSERT INTO `exercise_catalog_fts`(`docid`, `nameEs`, `nameEn`, `normalizedName`, `aliases`) VALUES (NEW.`rowid`, NEW.`nameEs`, NEW.`nameEn`, NEW.`normalizedName`, NEW.`aliases`); END")
+                db.execSQL("CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_AFTER_INSERT AFTER INSERT ON `exercise_search_content` BEGIN INSERT INTO `exercise_catalog_fts`(`docid`, `nameEs`, `nameEn`, `normalizedName`, `aliases`) VALUES (NEW.`rowid`, NEW.`nameEs`, NEW.`nameEn`, NEW.`normalizedName`, NEW.`aliases`); END")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `exercise_catalog_imports` (
+                        `source` TEXT NOT NULL,
+                        `importVersion` TEXT NOT NULL,
+                        `compactSha256` TEXT NOT NULL,
+                        `recordCount` INTEGER NOT NULL,
+                        `normalizationRulesVersion` TEXT NOT NULL,
+                        `appliedAtEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`source`)
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE `users` SET `uid` = 'legacy_owner_v1' WHERE `uid` = 'local_user'")
+                listOf(
+                    "daily_activity",
+                    "streaks",
+                    "daily_missions",
+                    "achievements"
+                ).forEach { table ->
+                    db.execSQL(
+                        "UPDATE `$table` SET `userId` = 'legacy_owner_v1' WHERE `userId` = 'local_user'"
+                    )
+                }
+                val legacyOwnerDefinition = "TEXT NOT NULL DEFAULT 'legacy_owner_v1'"
+                listOf(
+                    "food_logs",
+                    "food_entries",
+                    "food_items",
+                    "workout_logs",
+                    "activity_sessions",
+                    "health_logs"
+                ).forEach { table ->
+                    addColumnIfMissing(db, table, "ownerId", legacyOwnerDefinition)
+                }
+
+                listOf(
+                    "index_food_logs_timestamp",
+                    "index_food_entries_dateKey",
+                    "index_food_entries_mealType",
+                    "index_food_entries_barcode",
+                    "index_food_items_barcode",
+                    "index_food_items_isFavorite",
+                    "index_food_items_name",
+                    "index_workout_logs_timestamp",
+                    "index_activity_sessions_discipline",
+                    "index_activity_sessions_timestamp",
+                    "index_health_logs_timestamp",
+                    "index_health_logs_dateKey"
+                ).forEach { index -> db.execSQL("DROP INDEX IF EXISTS `$index`") }
+
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_logs_ownerId_timestamp` ON `food_logs` (`ownerId`, `timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_dateKey` ON `food_entries` (`ownerId`, `dateKey`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_mealType` ON `food_entries` (`ownerId`, `mealType`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_barcode` ON `food_entries` (`ownerId`, `barcode`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_food_items_ownerId_barcode` ON `food_items` (`ownerId`, `barcode`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_items_ownerId_isFavorite` ON `food_items` (`ownerId`, `isFavorite`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_food_items_ownerId_name` ON `food_items` (`ownerId`, `name`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_workout_logs_ownerId_timestamp` ON `workout_logs` (`ownerId`, `timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_activity_sessions_ownerId_discipline` ON `activity_sessions` (`ownerId`, `discipline`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_activity_sessions_ownerId_timestamp` ON `activity_sessions` (`ownerId`, `timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_health_logs_ownerId_timestamp` ON `health_logs` (`ownerId`, `timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_health_logs_ownerId_dateKey` ON `health_logs` (`ownerId`, `dateKey`)")
             }
         }
 

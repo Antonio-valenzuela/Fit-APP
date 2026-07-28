@@ -3,6 +3,6 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="m" />
 </manifest>

@@ -7,8 +7,10 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -23,8 +25,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.features.gym.ui.GymViewModel
 import com.example.BuildConfig
 import com.example.data.model.UserDiscipline
+import com.example.data.model.getTrainingPlace
 import com.example.ui.theme.GoldenAmber
 import com.example.ui.muscles.MuscleMapScreen
+import com.example.ui.catalog.ExerciseCatalogDetailScreen
+import com.example.ui.catalog.ExerciseCatalogScreen
+import com.example.ui.catalog.ExerciseCatalogViewModel
 import com.example.ui.viewmodel.FitPlanViewModel
 
 // ==========================================
@@ -56,6 +62,8 @@ object Destinations {
     const val CYCLING_HISTORY = "cycling_history"
     const val WALKING_HISTORY = "walking_history"
     const val ACTIVITY_SESSION_DETAIL = "activity_session_detail"
+    const val EXERCISE_CATALOG = "exercise_catalog"
+    const val EXERCISE_DETAIL = "exercise_detail"
 }
 
 @Composable
@@ -68,12 +76,42 @@ fun FitPlanAppContent(
     val featureSettings by viewModel.featureSettings.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentScreen = backStackEntry?.destination?.route ?: Destinations.LOGIN
+    val restorableRoutes = remember {
+        setOf(
+            Destinations.DASHBOARD,
+            Destinations.WORKOUT,
+            Destinations.NUTRITION,
+            Destinations.HEALTH,
+            Destinations.PROFILE,
+            Destinations.PROGRESS,
+            Destinations.MUSCLE_MAP,
+            Destinations.SETTINGS,
+            Destinations.EXERCISE_CATALOG
+        )
+    }
+    var lastRestorableRoute by rememberSaveable { mutableStateOf(Destinations.DASHBOARD) }
+
+    LaunchedEffect(isLoggedIn, currentScreen) {
+        if (!isLoggedIn) {
+            lastRestorableRoute = Destinations.DASHBOARD
+        } else if (currentScreen in restorableRoutes) {
+            lastRestorableRoute = currentScreen
+        }
+    }
 
     fun navigate(destination: String) {
+        val bottomBarRoutes = setOf(
+            Destinations.DASHBOARD,
+            Destinations.WORKOUT,
+            Destinations.NUTRITION,
+            Destinations.HEALTH,
+            Destinations.PROFILE
+        )
+        val shouldRestore = destination in bottomBarRoutes
         if (destination == currentScreen) return
         navController.navigate(destination) {
             launchSingleTop = true
-            restoreState = true
+            restoreState = shouldRestore
         }
     }
 
@@ -89,13 +127,13 @@ fun FitPlanAppContent(
     }
 
     // Enforce automatic redirection based on auth/onboarding states
-    LaunchedEffect(isLoggedIn, isOnboardingCompleted, currentScreen) {
+    LaunchedEffect(isLoggedIn, isOnboardingCompleted, currentScreen, lastRestorableRoute) {
         if (!isLoggedIn && currentScreen != Destinations.LOGIN) {
             replaceStack(Destinations.LOGIN)
         } else if (isLoggedIn && !isOnboardingCompleted && currentScreen != Destinations.ONBOARDING) {
             replaceStack(Destinations.ONBOARDING)
         } else if (isLoggedIn && isOnboardingCompleted && (currentScreen == Destinations.LOGIN || currentScreen == Destinations.ONBOARDING)) {
-            replaceStack(Destinations.DASHBOARD)
+            replaceStack(lastRestorableRoute)
         }
     }
 
@@ -105,6 +143,7 @@ fun FitPlanAppContent(
                 (currentScreen == Destinations.WORKOUT && !featureSettings.workoutEnabled) ||
                 (currentScreen == Destinations.HEALTH && !featureSettings.healthEnabled) ||
                 (currentScreen == Destinations.PROGRESS && !featureSettings.progressEnabled) ||
+                ((currentScreen == Destinations.EXERCISE_CATALOG || currentScreen.startsWith(Destinations.EXERCISE_DETAIL)) && !featureSettings.exerciseCatalogEnabled) ||
                 (currentScreen == Destinations.DEVELOPER_SETTINGS && !BuildConfig.DEBUG)
 
         if (isLoggedIn && isOnboardingCompleted && hiddenRouteRequested) {
@@ -123,7 +162,25 @@ fun FitPlanAppContent(
         composable(Destinations.NUTRITION) { NutritionScreen(viewModel, ::navigate) }
         composable(Destinations.WORKOUT) {
             val gymViewModel: GymViewModel = hiltViewModel()
-            WorkoutScreen(gymViewModel, ::navigate)
+            WorkoutScreen(gymViewModel, ::navigate, featureSettings.exerciseCatalogEnabled)
+        }
+        composable(Destinations.EXERCISE_CATALOG) {
+            val catalogViewModel: ExerciseCatalogViewModel = hiltViewModel()
+            val user by viewModel.userProfile.collectAsStateWithLifecycle()
+            ExerciseCatalogScreen(
+                viewModel = catalogViewModel,
+                initialTrainingPlace = user?.getTrainingPlace(),
+                onBack = { navController.popBackStack() },
+                onOpenDetail = { catalogId -> navigate("${Destinations.EXERCISE_DETAIL}/$catalogId") }
+            )
+        }
+        composable("${Destinations.EXERCISE_DETAIL}/{catalogId}") { entry ->
+            val catalogViewModel: ExerciseCatalogViewModel = hiltViewModel()
+            ExerciseCatalogDetailScreen(
+                viewModel = catalogViewModel,
+                catalogId = entry.arguments?.getString("catalogId").orEmpty(),
+                onBack = { navController.popBackStack() }
+            )
         }
         composable(Destinations.HEALTH) { HealthScreen(viewModel, ::navigate) }
         composable(Destinations.PROGRESS) { ProgressScreen(viewModel, ::navigate) }
@@ -210,6 +267,7 @@ fun FitPlanBottomBar(
         items.forEach { item ->
             val selected = item.selectedRoutes.contains(selectedRoute)
             NavigationBarItem(
+                modifier = Modifier.testTag("bottom_nav_${item.route}"),
                 selected = selected,
                 onClick = { if (!selected) onNavigate(item.route) },
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },

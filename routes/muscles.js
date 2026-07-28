@@ -2,7 +2,8 @@
 
 const express = require('express')
 const router = express.Router()
-const { authenticateToken } = require('../middleware/auth')
+const { authenticateToken, ensureAuthenticatedPrincipal } = require('../middleware/auth')
+const { postAuthRateLimit } = require('../middleware/rateLimits')
 const {
   calculateSessionMuscleVolume,
   getHeatmap,
@@ -10,37 +11,43 @@ const {
   recommendNextMuscleGroup
 } = require('../services/muscleService')
 
-router.get('/heatmap', authenticateToken, async (req, res) => {
+router.use(authenticateToken, postAuthRateLimit, ensureAuthenticatedPrincipal)
+
+function reportRouteError(req, event) {
+  req.app?.locals?.securityLogger?.error?.({ event, requestId: req.id })
+}
+
+router.get('/heatmap', async (req, res) => {
   try {
     const { heatmap, days } = await getHeatmap(req.user.id, req.query.days)
     res.json({ ok: true, heatmap, days })
   } catch (err) {
-    console.error('[muscles/heatmap]', err)
+    reportRouteError(req, 'muscles.heatmap.error')
     res.status(500).json({ error: 'Error al obtener mapa muscular' })
   }
 })
 
-router.get('/imbalances', authenticateToken, async (req, res) => {
+router.get('/imbalances', async (req, res) => {
   try {
     const imbalances = await detectImbalances(req.user.id)
     res.json({ ok: true, imbalances, count: imbalances.length })
   } catch (err) {
-    console.error('[muscles/imbalances]', err)
+    reportRouteError(req, 'muscles.imbalances.error')
     res.status(500).json({ error: 'Error al detectar desbalances musculares' })
   }
 })
 
-router.get('/recommend', authenticateToken, async (req, res) => {
+router.get('/recommend', async (req, res) => {
   try {
     const recommendation = await recommendNextMuscleGroup(req.user.id)
     res.json({ ok: true, recommendation })
   } catch (err) {
-    console.error('[muscles/recommend]', err)
+    reportRouteError(req, 'muscles.recommend.error')
     res.status(500).json({ error: 'Error al generar recomendacion muscular' })
   }
 })
 
-router.post('/session', authenticateToken, async (req, res) => {
+router.post('/session', async (req, res) => {
   const { session_date: sessionDate, exercises } = req.body
 
   if (!Array.isArray(exercises) || exercises.length === 0) {
@@ -55,7 +62,7 @@ router.post('/session', authenticateToken, async (req, res) => {
     )
     res.json({ ok: true, muscle_volumes: volumes })
   } catch (err) {
-    console.error('[muscles/session]', err)
+    reportRouteError(req, 'muscles.session.error')
     res.status(500).json({ error: 'Error al procesar sesion muscular' })
   }
 })

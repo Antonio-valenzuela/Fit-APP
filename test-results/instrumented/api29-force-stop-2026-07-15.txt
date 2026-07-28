@@ -1,0 +1,34 @@
+Device: emulator-5554
+AVD: FitPlan_API_29
+Android: 10 / API 29
+Package: com.aistudio.fitplanmx.app
+Activity: com.example.MainActivity
+
+Procedure:
+1. adb install -r app/build/outputs/apk/debug/app-debug.apk
+2. Resolve launcher activity with cmd package resolve-activity --brief.
+3. Launch with am start -W.
+4. am force-stop com.aistudio.fitplanmx.app.
+5. Relaunch the resolved activity with am start -W.
+6. Inspect dumpsys activity top, pidof, and Logcat for FATAL EXCEPTION / ANR in / am_anr.
+
+First launch:
+Status: ok
+LaunchState: COLD
+TotalTime: 7282
+WaitTime: 7313
+
+After force-stop:
+Status: ok
+LaunchState: COLD
+TotalTime: 98
+WaitTime: 99
+
+Post-launch verification after 2 seconds:
+TASK com.aistudio.fitplanmx.app id=70 userId=0
+ACTIVITY com.aistudio.fitplanmx.app/com.example.MainActivity pid=12338
+pidof com.aistudio.fitplanmx.app: 12338
+FATAL EXCEPTION / ANR matches: 0
+
+Scope limitation: this was a clean debug installation. It proves cold reopening only;
+it is not evidence of historical migration or preservation of a prior catalog database.

@@ -1,103 +1,107 @@
-# Guía de Despliegue Público del Backend y Pruebas en Exterior
+# Guía segura de despliegue público del backend
 
-Esta guía detalla los pasos para desplegar el servidor backend proxy Node.js en internet, configurar la app de Android para usar la URL pública HTTPS y poder realizar pruebas en el exterior (restaurantes, calle, etc.) con datos móviles y GPS activo.
+Esta guía describe el despliegue del backend Node.js/Express de FitPlan detrás de HTTPS y la configuración de Android para consumirlo. La autenticación vigente usa un ID token de Google verificado por el servidor y un JWT Bearer de corta duración. No se usan llaves estáticas compartidas entre la app y el backend.
 
----
+> Estado de seguridad: la credencial estática incluida en una versión anterior de esta guía debe considerarse comprometida. Su revocación, la revisión de despliegues antiguos y cualquier limpieza coordinada del historial Git siguen siendo tareas operativas pendientes. No copies secretos reales en documentación, `.env.example` ni en la app Android.
 
-## 1. Dónde Desplegar el Backend
+## 1. Prerrequisitos
 
-Puedes desplegar este backend de Node.js de forma rápida y gratuita (o de bajo costo) en las siguientes plataformas:
+- Un proveedor que termine TLS con una URL HTTPS estable.
+- MySQL accesible mediante TLS con verificación de identidad.
+- Un cliente OAuth de Google cuyo audience coincida con `GOOGLE_OAUTH_CLIENT_ID`.
+- Un almacén de secretos del proveedor para JWT, Gemini y la URL de base de datos.
+- Un servicio con estado compartido de rate limiting mediante MySQL para producción.
 
-* **Render** (Recomendado): Muy fácil de conectar directamente con tu repositorio de GitHub.
-* **Railway**: Excelente alternativa rápida con despliegue automático.
-* **Fly.io**: Excelente opción para despliegues ligeros en Docker.
-* **VPS propio** (DigitalOcean, AWS LightSail, etc.): Si tienes control total del servidor.
+Usa `.env.backend.example` únicamente como inventario de nombres. Los valores secretos deben inyectarse desde el secret manager del proveedor.
 
-### Pasos Generales para Desplegar (ej. Render):
-1. Sube el código del backend a tu repositorio de GitHub (puedes subir la carpeta raíz o crear un repositorio separado para el backend).
-2. Regístrate en [Render.com](https://render.com) e inicia sesión.
-3. Haz clic en **New** > **Web Service**.
-4. Selecciona tu repositorio de GitHub.
-5. Configura los siguientes parámetros básicos:
-   * **Runtime**: `Node`
-   * **Build Command**: `npm install`
-   * **Start Command**: `node index.js`
-   * **Instance Type**: `Free` (o el de tu preferencia)
+## 2. Crear el servicio
 
----
+1. Conecta el repositorio al proveedor de hosting.
+2. Selecciona un runtime Node.js compatible con el lockfile del proyecto.
+3. Configura `npm ci` como instalación reproducible.
+4. Configura `npm start` como comando de inicio.
+5. Expón el puerto indicado por `PORT` únicamente a través del proxy HTTPS administrado.
+6. Ejecuta las migraciones de MySQL antes de dirigir tráfico al nuevo release.
 
-## 2. Variables de Entorno del Servidor Backend
+No publiques MySQL directamente en internet. Limita su acceso a la red privada o a las direcciones del servicio backend y usa una cuenta con los permisos mínimos requeridos.
 
-En la sección de configuraciones (Environment Variables) de tu servicio de hosting, debes ingresar las siguientes llaves:
+## 3. Variables de entorno del backend
 
-* `PORT`: `3000` (o el puerto provisto por defecto por el hosting).
-* `BACKEND_API_KEY`: Una llave secreta estática para autenticar la app (debe coincidir con la de la app, ej. `fitplan_secret_key_123`).
-* `GEMINI_API_KEY`: Tu API Key real de Google Gemini (obtenida de Google AI Studio). El servidor la usará para proxy sin exponerla en la app.
-* `GEMINI_TIMEOUT_MS`: `60000` (tiempo límite para llamadas a Gemini).
+| Variable | Requisito de producción |
+|---|---|
+| `NODE_ENV` | Debe ser `production`. |
+| `PORT` | Puerto entregado por el proveedor. |
+| `JWT_SECRET` | Secreto aleatorio de al menos 32 bytes, almacenado sólo en el secret manager. |
+| `JWT_ISSUER` | Identificador HTTPS estable del emisor. |
+| `JWT_AUDIENCE` | Audience exclusivo del backend FitPlan. |
+| `JWT_ALGORITHMS` | Lista cerrada; la configuración de referencia usa `HS256`. |
+| `JWT_TTL_SECONDS` | Vigencia corta; la plantilla propone 900 segundos. |
+| `GEMINI_API_KEY` | Secreto del proveedor Gemini, nunca incluido en Android. |
+| `GEMINI_MODEL` | Modelo aprobado para el entorno. |
+| `CORS_ALLOWED_ORIGINS` | Orígenes HTTPS exactos, separados según la sintaxis de la plantilla; nunca `*`. |
+| `TRUST_PROXY_HOPS` | Número exacto de proxies confiables. Usa `1` sólo si existe un único proxy administrado. |
+| `DATABASE_URL` | URL MySQL inyectada como secreto. |
+| `DATABASE_TLS` | Debe ser `verify_identity`. |
+| `RATE_LIMIT_STORE` | Debe ser `mysql` en producción. |
+| `GOOGLE_OAUTH_CLIENT_ID` | Client ID web usado para verificar el audience del ID token. Es identificador público, no secreto. |
 
----
+El proceso falla de forma cerrada si faltan variables obligatorias, hay placeholders, se intenta usar CORS abierto, se deshabilita la verificación TLS de MySQL o se selecciona un rate store local en producción.
 
-## 3. Obtener y Configurar la URL HTTPS en la App
+## 4. Flujo de autenticación
 
-1. Una vez completado el despliegue del backend, el hosting te proporcionará una URL HTTPS pública, por ejemplo:
-   `https://fitplan-api-staging.onrender.com`
-2. Copia esa URL.
-3. Abre el archivo `.env` de tu proyecto Android (`C:\Users\yahir\Desktop\FIT-APP MAS ACTUALIDADA\.env`).
-4. Reemplaza o edita el valor de `BACKEND_BASE_URL` para que apunte a tu URL pública:
-   ```env
-   BACKEND_BASE_URL=https://fitplan-api-staging.onrender.com
-   ```
+1. Android inicia sesión con Google y obtiene un ID token para el client ID configurado.
+2. La app envía el ID token por HTTPS a `POST /api/auth/google`.
+3. El backend verifica firma, issuer, audience, expiración y subject con Google.
+4. El backend entrega un JWT propio de corta duración.
+5. Las rutas protegidas reciben `Authorization: Bearer <jwt>`.
 
----
+No guardes `JWT_SECRET`, `GEMINI_API_KEY`, `DATABASE_URL` ni credenciales del proveedor en el `.env` de Android, `BuildConfig`, recursos, APK/AAB o capturas.
 
-## 4. Reconstruir e Instalar la App en Celular Físico
+## 5. Configuración de Android
 
-Una vez que configuraste la URL pública en el `.env`, realiza los siguientes pasos para instalar el nuevo APK de pruebas:
+El archivo local `.env` de Android sólo debe contener configuración pública necesaria para compilar, por ejemplo:
 
-1. Asegúrate de tener habilitada la **Depuración por USB** en tu celular Android (Ajustes > Opciones de desarrollador).
-2. Conecta tu celular a la PC mediante cable USB.
-3. Compila e instala la aplicación ejecutando en la terminal de la PC:
-   ```powershell
-   .\gradlew.bat app:installDebug
-   ```
-   *Alternativamente, puedes compilar el APK con `.\gradlew.bat app:assembleDebug` y transferir el archivo APK generado en `app/build/outputs/apk/debug/app-debug.apk` a tu celular para instalarlo manualmente.*
-
----
-
-## 5. Pruebas Reales con Datos Móviles
-
-1. Desconecta tu celular del WiFi y activa la conexión de **Datos Móviles** (4G/5G).
-2. Abre la app **FitPlan MX**.
-3. Navega al apartado de comida/nutrición y realiza un **escaneo de comida con IA**:
-   * Si la app y el backend público están bien vinculados, la foto se subirá al servidor remoto en HTTPS, este procesará la información con Gemini y la app registrará correctamente tus calorías y macros en tiempo real sin importar que estés en la calle o en un restaurante.
-4. **Verificación de Errores**:
-   * Si ocurre algún fallo de conexión, el usuario verá el mensaje amigable: `"No se pudo analizar la comida. Revisa tu conexión o intenta de nuevo."`
-   * Puedes ver el error técnico detallado conectando el celular a la PC y revisando Android Studio Logcat con el filtro `GeminiService`.
-
----
-
-## 6. Resumen de Pasos de Prueba Finales
-
-### Paso 7: Actualiza la app Android con la URL real
-Cuando Render te proporcione la URL real del Web Service, abre el archivo [.env](file:///C:/Users/yahir/Desktop/FIT-APP%20MAS%20ACTUALIDADA/.env) de tu proyecto Android y configura:
 ```env
-BACKEND_BASE_URL=https://tu-app-de-render.onrender.com
-BACKEND_API_KEY=fitplan_secret_key_123
-```
-*(Asegúrate de poner la URL sin la barra `/` final).*
-
-### Paso 8: Reconstruir e instalar la app
-Cada vez que cambies la URL en el `.env`, realiza una limpieza completa de la caché para evitar referencias antiguas en `BuildConfig`. Abre PowerShell y ejecuta:
-```powershell
-cd "C:\Users\yahir\Desktop\FIT-APP MAS ACTUALIDADA"
-.\gradlew.bat clean
-.\gradlew.bat app:assembleDebug
-.\gradlew.bat app:installDebug
+BACKEND_BASE_URL=https://api.example.com
+GOOGLE_WEB_CLIENT_ID=public-client-id.apps.googleusercontent.com
 ```
 
-### Paso 9: Prueba real con datos móviles
-En tu celular Android físico:
-1. Apaga el WiFi y mantén activos únicamente los **Datos Móviles** (4G/5G).
-2. Abre tu navegador web en el celular e ingresa a: `https://tu-app-de-render.onrender.com/health`
-3. Si responde `{ "status": "UP" }`, abre **FitPlan MX**.
-4. Ve al escaneo de comida con IA y realiza una prueba subiendo una foto. El procesamiento debe completarse de forma remota sin requerir que estés conectado al WiFi ni tener la PC encendida.
+- Usa una URL HTTPS sin barra final.
+- Release mantiene cleartext deshabilitado.
+- El tráfico HTTP local permitido por la configuración debug no debe trasladarse al manifest principal.
+- No añadas una llave estática de backend: el cliente usa el JWT obtenido tras la verificación Google.
+
+## 6. Controles del proxy y de MySQL
+
+- Redirige HTTP a HTTPS antes de llegar a Node.js.
+- Conserva un único límite de confianza conocido para `X-Forwarded-For` y `X-Forwarded-Proto`.
+- No permitas que clientes alcancen directamente el puerto Node y falsifiquen headers del proxy.
+- Usa certificados MySQL con cadena y hostname válidos; no aceptes modos equivalentes a `rejectUnauthorized: false`.
+- Mantén las tablas del limiter disponibles para todas las réplicas del backend.
+- Centraliza stdout JSON con retención y alertas, sin cuerpos, tokens, correos ni datos de salud.
+
+## 7. Verificación previa a producción
+
+Estas comprobaciones deben ejecutarse contra el release candidato; esta guía no afirma que ya se hayan completado:
+
+- `/health` responde con información mínima y sin secretos.
+- Una solicitud protegida sin Bearer válido recibe `401`.
+- Un origen web no permitido es rechazado; las solicitudes nativas sin `Origin` conservan el flujo esperado.
+- Los headers de Helmet y HSTS aparecen a través del endpoint HTTPS público.
+- El límite pre-auth y el límite por usuario producen `429` y comparten estado entre réplicas.
+- MySQL rechaza una cadena o identidad TLS inválida.
+- El login Google rechaza issuer/audience/expiración incorrectos y entrega un JWT sólo para un ID token válido.
+- Los logs permiten correlación por `requestId` sin exponer credenciales ni datos sensibles.
+- APK y AAB no contienen secretos, URLs privadas ni certificados de firma debug.
+
+## 8. Rotación e historial
+
+La eliminación de un valor del working tree no lo revoca ni lo quita de commits anteriores. El propietario de la infraestructura debe:
+
+1. Revocar o rotar la credencial histórica en todos los proveedores y despliegues.
+2. Confirmar que ninguna versión antigua del backend sigue aceptando autenticación estática.
+3. Revisar logs de uso del proveedor dentro del periodo de retención disponible.
+4. Coordinar la limpieza del historial con el equipo antes de usar `git-filter-repo` o BFG.
+5. Volver a escanear el repositorio completo y sus artefactos después de la rotación y de cualquier reescritura.
+
+No reescribas historia compartida ni fuerces un push sin una ventana de coordinación y un plan para que todos los clones se sincronicen de nuevo.

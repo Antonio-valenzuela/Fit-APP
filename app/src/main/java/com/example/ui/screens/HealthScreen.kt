@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -272,7 +273,7 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("health_screen").frostedMeshBackground(isDark),
         bottomBar = { FitPlanBottomBar(Destinations.HEALTH, onNavigate, isPremium, discipline) }
     ) { innerPadding ->
         LazyColumn(
@@ -303,7 +304,7 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Button(onClick = { openTypeChooser() }) {
+                    Button(onClick = { openTypeChooser() }, modifier = Modifier.testTag("add_health_entry_button")) {
                         Text("Agregar entrada")
                     }
                 }
@@ -375,6 +376,7 @@ fun HealthScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag("health_entry_sheet")
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 24.dp)
                     .verticalScroll(rememberScrollState()),

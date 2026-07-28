@@ -1,0 +1,1704 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 12,
+    "identityHash": "64c9cfa9cfd1ed00260b260436a1ab29",
+    "entities": [
+      {
+        "tableName": "users",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uid` TEXT NOT NULL, `name` TEXT NOT NULL, `email` TEXT NOT NULL, `age` INTEGER NOT NULL, `weightKg` REAL NOT NULL, `heightCm` REAL NOT NULL, `gender` TEXT NOT NULL, `activityLevel` TEXT NOT NULL, `goal` TEXT NOT NULL, `targetCalories` INTEGER NOT NULL, `targetProteinG` INTEGER NOT NULL, `targetCarbsG` INTEGER NOT NULL, `targetFatG` INTEGER NOT NULL, `disclaimerAccepted` INTEGER NOT NULL, `isPremium` INTEGER NOT NULL, `trainingDiscipline` TEXT NOT NULL DEFAULT 'GYM', PRIMARY KEY(`uid`))",
+        "fields": [
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "email",
+            "columnName": "email",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "age",
+            "columnName": "age",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "heightCm",
+            "columnName": "heightCm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activityLevel",
+            "columnName": "activityLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "goal",
+            "columnName": "goal",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetCalories",
+            "columnName": "targetCalories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetProteinG",
+            "columnName": "targetProteinG",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetCarbsG",
+            "columnName": "targetCarbsG",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetFatG",
+            "columnName": "targetFatG",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "disclaimerAccepted",
+            "columnName": "disclaimerAccepted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPremium",
+            "columnName": "isPremium",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trainingDiscipline",
+            "columnName": "trainingDiscipline",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'GYM'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uid"
+          ]
+        }
+      },
+      {
+        "tableName": "food_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `mealName` TEXT NOT NULL, `mealType` TEXT NOT NULL, `calories` INTEGER NOT NULL, `proteinG` REAL NOT NULL, `carbsG` REAL NOT NULL, `fatG` REAL NOT NULL, `timestamp` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealName",
+            "columnName": "mealName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealType",
+            "columnName": "mealType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proteinG",
+            "columnName": "proteinG",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carbsG",
+            "columnName": "carbsG",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatG",
+            "columnName": "fatG",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_food_logs_ownerId_timestamp",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_logs_ownerId_timestamp` ON `${TABLE_NAME}` (`ownerId`, `timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "food_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `dateKey` TEXT NOT NULL, `mealType` TEXT NOT NULL, `foodName` TEXT NOT NULL, `portionLabel` TEXT NOT NULL, `calories` INTEGER NOT NULL, `proteinGrams` REAL NOT NULL, `carbsGrams` REAL NOT NULL, `fatGrams` REAL NOT NULL, `saturatedFatGrams` REAL, `fiberGrams` REAL, `sugarGrams` REAL, `sodiumMg` REAL, `source` TEXT NOT NULL, `barcode` TEXT, `notes` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateKey",
+            "columnName": "dateKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mealType",
+            "columnName": "mealType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "foodName",
+            "columnName": "foodName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "portionLabel",
+            "columnName": "portionLabel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calories",
+            "columnName": "calories",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proteinGrams",
+            "columnName": "proteinGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carbsGrams",
+            "columnName": "carbsGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatGrams",
+            "columnName": "fatGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "saturatedFatGrams",
+            "columnName": "saturatedFatGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "fiberGrams",
+            "columnName": "fiberGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sugarGrams",
+            "columnName": "sugarGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sodiumMg",
+            "columnName": "sodiumMg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_food_entries_ownerId_dateKey",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "dateKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_dateKey` ON `${TABLE_NAME}` (`ownerId`, `dateKey`)"
+          },
+          {
+            "name": "index_food_entries_ownerId_mealType",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "mealType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_mealType` ON `${TABLE_NAME}` (`ownerId`, `mealType`)"
+          },
+          {
+            "name": "index_food_entries_ownerId_barcode",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "barcode"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_entries_ownerId_barcode` ON `${TABLE_NAME}` (`ownerId`, `barcode`)"
+          }
+        ]
+      },
+      {
+        "tableName": "food_items",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `brand` TEXT, `barcode` TEXT, `caloriesPerServing` INTEGER NOT NULL, `proteinGrams` REAL NOT NULL, `carbsGrams` REAL NOT NULL, `fatGrams` REAL NOT NULL, `saturatedFatGrams` REAL, `fiberGrams` REAL, `sugarGrams` REAL, `sodiumMg` REAL, `servingLabel` TEXT NOT NULL, `isFavorite` INTEGER NOT NULL, `isCustom` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "brand",
+            "columnName": "brand",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "barcode",
+            "columnName": "barcode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "caloriesPerServing",
+            "columnName": "caloriesPerServing",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proteinGrams",
+            "columnName": "proteinGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carbsGrams",
+            "columnName": "carbsGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fatGrams",
+            "columnName": "fatGrams",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "saturatedFatGrams",
+            "columnName": "saturatedFatGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "fiberGrams",
+            "columnName": "fiberGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sugarGrams",
+            "columnName": "sugarGrams",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "sodiumMg",
+            "columnName": "sodiumMg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "servingLabel",
+            "columnName": "servingLabel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isFavorite",
+            "columnName": "isFavorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isCustom",
+            "columnName": "isCustom",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_food_items_ownerId_barcode",
+            "unique": true,
+            "columnNames": [
+              "ownerId",
+              "barcode"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_food_items_ownerId_barcode` ON `${TABLE_NAME}` (`ownerId`, `barcode`)"
+          },
+          {
+            "name": "index_food_items_ownerId_isFavorite",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "isFavorite"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_items_ownerId_isFavorite` ON `${TABLE_NAME}` (`ownerId`, `isFavorite`)"
+          },
+          {
+            "name": "index_food_items_ownerId_name",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_food_items_ownerId_name` ON `${TABLE_NAME}` (`ownerId`, `name`)"
+          }
+        ]
+      },
+      {
+        "tableName": "workout_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `routineName` TEXT NOT NULL, `durationMinutes` INTEGER NOT NULL, `caloriesBurned` INTEGER NOT NULL, `exercisesText` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "routineName",
+            "columnName": "routineName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMinutes",
+            "columnName": "durationMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "caloriesBurned",
+            "columnName": "caloriesBurned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exercisesText",
+            "columnName": "exercisesText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_logs_ownerId_timestamp",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_workout_logs_ownerId_timestamp` ON `${TABLE_NAME}` (`ownerId`, `timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "activity_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `discipline` TEXT NOT NULL, `sportType` TEXT NOT NULL DEFAULT '', `title` TEXT NOT NULL, `distanceKm` REAL NOT NULL, `durationMinutes` INTEGER NOT NULL, `caloriesBurned` INTEGER NOT NULL, `routePointsJson` TEXT NOT NULL DEFAULT '', `startedAt` INTEGER NOT NULL DEFAULT 0, `endedAt` INTEGER NOT NULL DEFAULT 0, `durationSeconds` INTEGER NOT NULL DEFAULT 0, `averagePaceMinPerKm` REAL NOT NULL DEFAULT 0, `averageSpeedKmh` REAL NOT NULL DEFAULT 0, `source` TEXT NOT NULL DEFAULT 'local_manual', `notes` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "discipline",
+            "columnName": "discipline",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sportType",
+            "columnName": "sportType",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distanceKm",
+            "columnName": "distanceKm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMinutes",
+            "columnName": "durationMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "caloriesBurned",
+            "columnName": "caloriesBurned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "routePointsJson",
+            "columnName": "routePointsJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "startedAt",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "endedAt",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "durationSeconds",
+            "columnName": "durationSeconds",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "averagePaceMinPerKm",
+            "columnName": "averagePaceMinPerKm",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "averageSpeedKmh",
+            "columnName": "averageSpeedKmh",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'local_manual'"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_activity_sessions_ownerId_discipline",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "discipline"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_activity_sessions_ownerId_discipline` ON `${TABLE_NAME}` (`ownerId`, `discipline`)"
+          },
+          {
+            "name": "index_activity_sessions_ownerId_timestamp",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_activity_sessions_ownerId_timestamp` ON `${TABLE_NAME}` (`ownerId`, `timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "health_logs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type` TEXT NOT NULL DEFAULT '', `value` REAL NOT NULL DEFAULT 0, `secondaryValue` REAL NOT NULL DEFAULT 0, `unit` TEXT NOT NULL DEFAULT '', `context` TEXT NOT NULL DEFAULT '', `note` TEXT NOT NULL DEFAULT '', `dateKey` TEXT NOT NULL DEFAULT '', `createdAt` INTEGER NOT NULL DEFAULT 0, `updatedAt` INTEGER NOT NULL DEFAULT 0, `pulse` INTEGER NOT NULL DEFAULT 0, `isAutoWorkout` INTEGER NOT NULL DEFAULT 0, `glucoseLevel` REAL NOT NULL, `glucoseIsPreMeal` INTEGER NOT NULL, `systolicPressure` INTEGER NOT NULL, `diastolicPressure` INTEGER NOT NULL, `waterIntakeMl` INTEGER NOT NULL, `sleepDurationHours` REAL NOT NULL, `sleepQualityScale` INTEGER NOT NULL, `energyLevel` INTEGER NOT NULL DEFAULT 0, `moodLevel` INTEGER NOT NULL DEFAULT 0, `painFatigueLevel` INTEGER NOT NULL DEFAULT 0, `painFatigueNote` TEXT NOT NULL DEFAULT '', `steps` INTEGER NOT NULL DEFAULT 0, `weightKg` REAL NOT NULL, `timestamp` INTEGER NOT NULL, `ownerId` TEXT NOT NULL DEFAULT 'legacy_owner_v1')",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "value",
+            "columnName": "value",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "secondaryValue",
+            "columnName": "secondaryValue",
+            "affinity": "REAL",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "context",
+            "columnName": "context",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "dateKey",
+            "columnName": "dateKey",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "pulse",
+            "columnName": "pulse",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "isAutoWorkout",
+            "columnName": "isAutoWorkout",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "glucoseLevel",
+            "columnName": "glucoseLevel",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "glucoseIsPreMeal",
+            "columnName": "glucoseIsPreMeal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "systolicPressure",
+            "columnName": "systolicPressure",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diastolicPressure",
+            "columnName": "diastolicPressure",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "waterIntakeMl",
+            "columnName": "waterIntakeMl",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepDurationHours",
+            "columnName": "sleepDurationHours",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sleepQualityScale",
+            "columnName": "sleepQualityScale",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "energyLevel",
+            "columnName": "energyLevel",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "moodLevel",
+            "columnName": "moodLevel",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "painFatigueLevel",
+            "columnName": "painFatigueLevel",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "painFatigueNote",
+            "columnName": "painFatigueNote",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "steps",
+            "columnName": "steps",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'legacy_owner_v1'"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_health_logs_ownerId_timestamp",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_health_logs_ownerId_timestamp` ON `${TABLE_NAME}` (`ownerId`, `timestamp`)"
+          },
+          {
+            "name": "index_health_logs_ownerId_dateKey",
+            "unique": false,
+            "columnNames": [
+              "ownerId",
+              "dateKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_health_logs_ownerId_dateKey` ON `${TABLE_NAME}` (`ownerId`, `dateKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "daily_activity",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` TEXT NOT NULL, `date` TEXT NOT NULL, `hasFoodLog` INTEGER NOT NULL, `hasWaterLog` INTEGER NOT NULL, `hasWorkoutLog` INTEGER NOT NULL, `hasWeightLog` INTEGER NOT NULL, `hasSleepLog` INTEGER NOT NULL, `hasCheckIn` INTEGER NOT NULL, `hasMissionCompleted` INTEGER NOT NULL, `isActiveDay` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasFoodLog",
+            "columnName": "hasFoodLog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasWaterLog",
+            "columnName": "hasWaterLog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasWorkoutLog",
+            "columnName": "hasWorkoutLog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasWeightLog",
+            "columnName": "hasWeightLog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasSleepLog",
+            "columnName": "hasSleepLog",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasCheckIn",
+            "columnName": "hasCheckIn",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasMissionCompleted",
+            "columnName": "hasMissionCompleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActiveDay",
+            "columnName": "isActiveDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_daily_activity_userId_date",
+            "unique": false,
+            "columnNames": [
+              "userId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_activity_userId_date` ON `${TABLE_NAME}` (`userId`, `date`)"
+          }
+        ]
+      },
+      {
+        "tableName": "streaks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`userId` TEXT NOT NULL, `currentStreak` INTEGER NOT NULL, `bestStreak` INTEGER NOT NULL, `lastActiveDate` TEXT, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`userId`))",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentStreak",
+            "columnName": "currentStreak",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestStreak",
+            "columnName": "bestStreak",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastActiveDate",
+            "columnName": "lastActiveDate",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "userId"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_missions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` TEXT NOT NULL, `date` TEXT NOT NULL, `missionKey` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `completed` INTEGER NOT NULL, `completedAt` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "missionKey",
+            "columnName": "missionKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completed",
+            "columnName": "completed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_daily_missions_userId_date",
+            "unique": false,
+            "columnNames": [
+              "userId",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_missions_userId_date` ON `${TABLE_NAME}` (`userId`, `date`)"
+          },
+          {
+            "name": "index_daily_missions_userId_date_missionKey",
+            "unique": false,
+            "columnNames": [
+              "userId",
+              "date",
+              "missionKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_missions_userId_date_missionKey` ON `${TABLE_NAME}` (`userId`, `date`, `missionKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "achievements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` TEXT NOT NULL, `achievementKey` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `unlockedAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "achievementKey",
+            "columnName": "achievementKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unlockedAt",
+            "columnName": "unlockedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_achievements_userId",
+            "unique": false,
+            "columnNames": [
+              "userId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_achievements_userId` ON `${TABLE_NAME}` (`userId`)"
+          },
+          {
+            "name": "index_achievements_userId_achievementKey",
+            "unique": false,
+            "columnNames": [
+              "userId",
+              "achievementKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_achievements_userId_achievementKey` ON `${TABLE_NAME}` (`userId`, `achievementKey`)"
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_catalog",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `catalogId` TEXT NOT NULL, `nameEs` TEXT, `nameEn` TEXT, `normalizedName` TEXT NOT NULL, `instructionsEs` TEXT, `instructionsEn` TEXT, `primaryMuscle` TEXT NOT NULL, `bodyRegion` TEXT NOT NULL, `primaryEquipmentType` TEXT NOT NULL, `locationCompatibility` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "rowId",
+            "columnName": "rowId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "catalogId",
+            "columnName": "catalogId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nameEs",
+            "columnName": "nameEs",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nameEn",
+            "columnName": "nameEn",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalizedName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructionsEs",
+            "columnName": "instructionsEs",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "instructionsEn",
+            "columnName": "instructionsEn",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "primaryMuscle",
+            "columnName": "primaryMuscle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bodyRegion",
+            "columnName": "bodyRegion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "primaryEquipmentType",
+            "columnName": "primaryEquipmentType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locationCompatibility",
+            "columnName": "locationCompatibility",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_catalog_catalogId",
+            "unique": true,
+            "columnNames": [
+              "catalogId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_exercise_catalog_catalogId` ON `${TABLE_NAME}` (`catalogId`)"
+          },
+          {
+            "name": "index_exercise_catalog_normalizedName",
+            "unique": false,
+            "columnNames": [
+              "normalizedName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_catalog_normalizedName` ON `${TABLE_NAME}` (`normalizedName`)"
+          },
+          {
+            "name": "index_exercise_catalog_primaryMuscle",
+            "unique": false,
+            "columnNames": [
+              "primaryMuscle"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_catalog_primaryMuscle` ON `${TABLE_NAME}` (`primaryMuscle`)"
+          },
+          {
+            "name": "index_exercise_catalog_bodyRegion",
+            "unique": false,
+            "columnNames": [
+              "bodyRegion"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_catalog_bodyRegion` ON `${TABLE_NAME}` (`bodyRegion`)"
+          },
+          {
+            "name": "index_exercise_catalog_primaryEquipmentType",
+            "unique": false,
+            "columnNames": [
+              "primaryEquipmentType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_catalog_primaryEquipmentType` ON `${TABLE_NAME}` (`primaryEquipmentType`)"
+          },
+          {
+            "name": "index_exercise_catalog_locationCompatibility",
+            "unique": false,
+            "columnNames": [
+              "locationCompatibility"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_catalog_locationCompatibility` ON `${TABLE_NAME}` (`locationCompatibility`)"
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_source_mappings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`source` TEXT NOT NULL, `sourceOriginalId` TEXT NOT NULL, `catalogId` TEXT, `importStatus` TEXT NOT NULL, `importVersion` TEXT NOT NULL, `normalizationRulesVersion` TEXT NOT NULL, PRIMARY KEY(`source`, `sourceOriginalId`), FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceOriginalId",
+            "columnName": "sourceOriginalId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "catalogId",
+            "columnName": "catalogId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "importStatus",
+            "columnName": "importStatus",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "importVersion",
+            "columnName": "importVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizationRulesVersion",
+            "columnName": "normalizationRulesVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "source",
+            "sourceOriginalId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_source_mappings_catalogId",
+            "unique": false,
+            "columnNames": [
+              "catalogId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_catalogId` ON `${TABLE_NAME}` (`catalogId`)"
+          },
+          {
+            "name": "index_exercise_source_mappings_importStatus",
+            "unique": false,
+            "columnNames": [
+              "importStatus"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_importStatus` ON `${TABLE_NAME}` (`importStatus`)"
+          },
+          {
+            "name": "index_exercise_source_mappings_source_importVersion",
+            "unique": false,
+            "columnNames": [
+              "source",
+              "importVersion"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_source_mappings_source_importVersion` ON `${TABLE_NAME}` (`source`, `importVersion`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "exercise_catalog",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "catalogId"
+            ],
+            "referencedColumns": [
+              "catalogId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_secondary_muscles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`catalogId` TEXT NOT NULL, `muscle` TEXT NOT NULL, PRIMARY KEY(`catalogId`, `muscle`), FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "catalogId",
+            "columnName": "catalogId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "muscle",
+            "columnName": "muscle",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "catalogId",
+            "muscle"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_secondary_muscles_muscle",
+            "unique": false,
+            "columnNames": [
+              "muscle"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_secondary_muscles_muscle` ON `${TABLE_NAME}` (`muscle`)"
+          },
+          {
+            "name": "index_exercise_secondary_muscles_catalogId",
+            "unique": false,
+            "columnNames": [
+              "catalogId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_secondary_muscles_catalogId` ON `${TABLE_NAME}` (`catalogId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "exercise_catalog",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "catalogId"
+            ],
+            "referencedColumns": [
+              "catalogId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_equipment_requirements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`catalogId` TEXT NOT NULL, `equipmentType` TEXT NOT NULL, PRIMARY KEY(`catalogId`, `equipmentType`), FOREIGN KEY(`catalogId`) REFERENCES `exercise_catalog`(`catalogId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "catalogId",
+            "columnName": "catalogId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "equipmentType",
+            "columnName": "equipmentType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "catalogId",
+            "equipmentType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_exercise_equipment_requirements_equipmentType",
+            "unique": false,
+            "columnNames": [
+              "equipmentType"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_equipment_requirements_equipmentType` ON `${TABLE_NAME}` (`equipmentType`)"
+          },
+          {
+            "name": "index_exercise_equipment_requirements_catalogId",
+            "unique": false,
+            "columnNames": [
+              "catalogId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_exercise_equipment_requirements_catalogId` ON `${TABLE_NAME}` (`catalogId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "exercise_catalog",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "catalogId"
+            ],
+            "referencedColumns": [
+              "catalogId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_search_content",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowid` INTEGER NOT NULL, `nameEs` TEXT, `nameEn` TEXT, `normalizedName` TEXT NOT NULL, `aliases` TEXT NOT NULL, PRIMARY KEY(`rowid`), FOREIGN KEY(`rowid`) REFERENCES `exercise_catalog`(`rowId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "rowId",
+            "columnName": "rowid",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nameEs",
+            "columnName": "nameEs",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nameEn",
+            "columnName": "nameEn",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalizedName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aliases",
+            "columnName": "aliases",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "exercise_catalog",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "rowid"
+            ],
+            "referencedColumns": [
+              "rowId"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "exercise_catalog_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`nameEs` TEXT, `nameEn` TEXT, `normalizedName` TEXT NOT NULL, `aliases` TEXT NOT NULL, content=`exercise_search_content`)",
+        "fields": [
+          {
+            "fieldPath": "nameEs",
+            "columnName": "nameEs",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "nameEn",
+            "columnName": "nameEn",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "normalizedName",
+            "columnName": "normalizedName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aliases",
+            "columnName": "aliases",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "exercise_search_content",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_BEFORE_UPDATE BEFORE UPDATE ON `exercise_search_content` BEGIN DELETE FROM `exercise_catalog_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_BEFORE_DELETE BEFORE DELETE ON `exercise_search_content` BEGIN DELETE FROM `exercise_catalog_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_AFTER_UPDATE AFTER UPDATE ON `exercise_search_content` BEGIN INSERT INTO `exercise_catalog_fts`(`docid`, `nameEs`, `nameEn`, `normalizedName`, `aliases`) VALUES (NEW.`rowid`, NEW.`nameEs`, NEW.`nameEn`, NEW.`normalizedName`, NEW.`aliases`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_exercise_catalog_fts_AFTER_INSERT AFTER INSERT ON `exercise_search_content` BEGIN INSERT INTO `exercise_catalog_fts`(`docid`, `nameEs`, `nameEn`, `normalizedName`, `aliases`) VALUES (NEW.`rowid`, NEW.`nameEs`, NEW.`nameEn`, NEW.`normalizedName`, NEW.`aliases`); END"
+        ]
+      },
+      {
+        "tableName": "exercise_catalog_imports",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`source` TEXT NOT NULL, `importVersion` TEXT NOT NULL, `compactSha256` TEXT NOT NULL, `recordCount` INTEGER NOT NULL, `normalizationRulesVersion` TEXT NOT NULL, `appliedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`source`))",
+        "fields": [
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "importVersion",
+            "columnName": "importVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "compactSha256",
+            "columnName": "compactSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordCount",
+            "columnName": "recordCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizationRulesVersion",
+            "columnName": "normalizationRulesVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appliedAtEpochMillis",
+            "columnName": "appliedAtEpochMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "source"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64c9cfa9cfd1ed00260b260436a1ab29')"
+    ]
+  }
+}

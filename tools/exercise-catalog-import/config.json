@@ -1,0 +1,407 @@
+{
+  "repository": "https://github.com/hasaneyldrm/exercises-dataset",
+  "commit": "118e4bd6b14da6df0e36605d7169b65db18389a4",
+  "expected_source_sha256": "83a450bac2917270eb3c7b8d2c2c42435f0b184c795e1663d950abbb0e0ea1f7",
+  "expected_records": 1324,
+  "generation_date": "2026-07-15",
+  "import_version": "exercise-catalog-2026-07-15-v1",
+  "normalization_rules_version": "fitplan-exercise-import-v2",
+  "builtins": [
+    [
+      "squat",
+      "Sentadilla",
+      "QUADS",
+      "BODY_WEIGHT"
+    ],
+    [
+      "bulgarian_squat",
+      "Sentadilla bulgara",
+      "GLUTES",
+      "DUMBBELL"
+    ],
+    [
+      "lunges",
+      "Zancadas",
+      "QUADS",
+      "BODY_WEIGHT"
+    ],
+    [
+      "hip_thrust",
+      "Hip thrust",
+      "GLUTES",
+      "BARBELL"
+    ],
+    [
+      "romanian_deadlift",
+      "Peso muerto rumano",
+      "HAMSTRINGS",
+      "BARBELL"
+    ],
+    [
+      "leg_curl",
+      "Curl femoral",
+      "HAMSTRINGS",
+      "MACHINE"
+    ],
+    [
+      "leg_extension",
+      "Extension de cuadriceps",
+      "QUADS",
+      "MACHINE"
+    ],
+    [
+      "calf_raise",
+      "Elevacion de talones",
+      "CALVES",
+      "MACHINE"
+    ],
+    [
+      "bench_press",
+      "Press banca",
+      "CHEST",
+      "BARBELL"
+    ],
+    [
+      "incline_press",
+      "Press inclinado",
+      "CHEST",
+      "BENCH"
+    ],
+    [
+      "flyes",
+      "Aperturas",
+      "CHEST",
+      "DUMBBELL"
+    ],
+    [
+      "push_up",
+      "Push up",
+      "CHEST",
+      "BODY_WEIGHT"
+    ],
+    [
+      "barbell_row",
+      "Remo con barra",
+      "BACK",
+      "BARBELL"
+    ],
+    [
+      "dumbbell_row",
+      "Remo con mancuerna",
+      "BACK",
+      "DUMBBELL"
+    ],
+    [
+      "lat_pulldown",
+      "Jalon al pecho",
+      "BACK",
+      "CABLE"
+    ],
+    [
+      "pull_up",
+      "Dominadas",
+      "BACK",
+      "BAR"
+    ],
+    [
+      "military_press",
+      "Press militar",
+      "SHOULDERS",
+      "BARBELL"
+    ],
+    [
+      "lateral_raise",
+      "Elevaciones laterales",
+      "SHOULDERS",
+      "DUMBBELL"
+    ],
+    [
+      "face_pull",
+      "Face pull",
+      "SHOULDERS",
+      "CABLE"
+    ],
+    [
+      "biceps_curl",
+      "Curl biceps",
+      "BICEPS",
+      "BARBELL"
+    ],
+    [
+      "hammer_curl",
+      "Curl martillo",
+      "BICEPS",
+      "DUMBBELL"
+    ],
+    [
+      "triceps_extension",
+      "Extension triceps",
+      "TRICEPS",
+      "CABLE"
+    ],
+    [
+      "french_press",
+      "Press frances",
+      "TRICEPS",
+      "EZ_BARBELL"
+    ],
+    [
+      "plank",
+      "Plancha",
+      "ABS",
+      "BODY_WEIGHT"
+    ],
+    [
+      "crunch",
+      "Crunch",
+      "ABS",
+      "BODY_WEIGHT"
+    ],
+    [
+      "leg_raise",
+      "Elevacion de piernas",
+      "ABS",
+      "BODY_WEIGHT"
+    ],
+    [
+      "russian_twist",
+      "Russian twist",
+      "ABS",
+      "BODY_WEIGHT"
+    ]
+  ],
+  "muscle_map": {
+    "abs": "ABS",
+    "abdominals": "ABS",
+    "lower abs": "ABS",
+    "obliques": "ABS",
+    "core": "ABS",
+    "abductors": "QUADS",
+    "adductors": "QUADS",
+    "biceps": "BICEPS",
+    "brachialis": "BICEPS",
+    "calves": "CALVES",
+    "cardiovascular system": "CARDIO",
+    "delts": "SHOULDERS",
+    "deltoids": "SHOULDERS",
+    "rear deltoids": "SHOULDERS",
+    "rotator cuff": "SHOULDERS",
+    "shoulders": "SHOULDERS",
+    "forearms": "FOREARMS",
+    "grip muscles": "FOREARMS",
+    "wrist extensors": "FOREARMS",
+    "wrist flexors": "FOREARMS",
+    "wrists": "FOREARMS",
+    "glutes": "GLUTES",
+    "hamstrings": "HAMSTRINGS",
+    "lats": "BACK",
+    "back": "BACK",
+    "lower back": "BACK",
+    "latissimus dorsi": "BACK",
+    "rhomboids": "BACK",
+    "levator scapulae": "TRAPS",
+    "pectorals": "CHEST",
+    "chest": "CHEST",
+    "upper chest": "CHEST",
+    "quads": "QUADS",
+    "quadriceps": "QUADS",
+    "groin": "QUADS",
+    "hip flexors": "QUADS",
+    "inner thighs": "QUADS",
+    "serratus anterior": "CHEST",
+    "spine": "BACK",
+    "traps": "TRAPS",
+    "trapezius": "TRAPS",
+    "triceps": "TRICEPS",
+    "upper back": "BACK",
+    "shins": "CALVES",
+    "soleus": "CALVES",
+    "ankle stabilizers": "CALVES",
+    "ankles": "CALVES"
+  },
+  "body_region_map": {
+    "back": "BACK",
+    "cardio": "CARDIO",
+    "chest": "CHEST",
+    "lower arms": "FOREARMS",
+    "lower legs": "LOWER_LEGS",
+    "neck": "NECK",
+    "shoulders": "SHOULDERS",
+    "upper arms": "UPPER_ARMS",
+    "upper legs": "UPPER_LEGS",
+    "waist": "CORE"
+  },
+  "equipment_map": {
+    "assisted": {
+      "enum": "MACHINE",
+      "requirements": [
+        "MACHINE"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "band": {
+      "enum": "BAND",
+      "requirements": [
+        "BAND"
+      ],
+      "location": "BOTH"
+    },
+    "barbell": {
+      "enum": "BARBELL",
+      "requirements": [
+        "BARBELL"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "body weight": {
+      "enum": "BODY_WEIGHT",
+      "requirements": [],
+      "location": "HOME_COMPATIBLE"
+    },
+    "bosu ball": {
+      "enum": "BOSU_BALL",
+      "requirements": [
+        "BOSU_BALL"
+      ],
+      "location": "BOTH"
+    },
+    "cable": {
+      "enum": "CABLE",
+      "requirements": [
+        "CABLE"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "dumbbell": {
+      "enum": "DUMBBELL",
+      "requirements": [
+        "DUMBBELL"
+      ],
+      "location": "BOTH"
+    },
+    "ez barbell": {
+      "enum": "EZ_BARBELL",
+      "requirements": [
+        "EZ_BARBELL"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "kettlebell": {
+      "enum": "KETTLEBELL",
+      "requirements": [
+        "KETTLEBELL"
+      ],
+      "location": "BOTH"
+    },
+    "leverage machine": {
+      "enum": "MACHINE",
+      "requirements": [
+        "MACHINE"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "medicine ball": {
+      "enum": "MEDICINE_BALL",
+      "requirements": [
+        "MEDICINE_BALL"
+      ],
+      "location": "BOTH"
+    },
+    "olympic barbell": {
+      "enum": "BARBELL",
+      "requirements": [
+        "BARBELL"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "resistance band": {
+      "enum": "BAND",
+      "requirements": [
+        "BAND"
+      ],
+      "location": "BOTH"
+    },
+    "roller": {
+      "enum": "ROLLER",
+      "requirements": [
+        "ROLLER"
+      ],
+      "location": "BOTH"
+    },
+    "rope": {
+      "enum": "ROPE",
+      "requirements": [
+        "ROPE"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "smith machine": {
+      "enum": "SMITH_MACHINE",
+      "requirements": [
+        "SMITH_MACHINE"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "stability ball": {
+      "enum": "STABILITY_BALL",
+      "requirements": [
+        "STABILITY_BALL"
+      ],
+      "location": "BOTH"
+    },
+    "weighted": {
+      "enum": "WEIGHTED",
+      "requirements": [
+        "WEIGHTED"
+      ],
+      "location": "GYM_COMPATIBLE"
+    },
+    "wheel roller": {
+      "enum": "AB_WHEEL",
+      "requirements": [
+        "AB_WHEEL"
+      ],
+      "location": "BOTH"
+    },
+    "elliptical machine": {
+      "enum": "ELLIPTICAL",
+      "requirements": ["ELLIPTICAL"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "skierg machine": {
+      "enum": "SKIERG",
+      "requirements": ["SKIERG"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "sled machine": {
+      "enum": "SLED",
+      "requirements": ["SLED"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "stationary bike": {
+      "enum": "STATIONARY_BIKE",
+      "requirements": ["STATIONARY_BIKE"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "stepmill machine": {
+      "enum": "STEPMILL",
+      "requirements": ["STEPMILL"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "tire": {
+      "enum": "TIRE",
+      "requirements": ["TIRE"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "trap bar": {
+      "enum": "TRAP_BAR",
+      "requirements": ["TRAP_BAR"],
+      "location": "GYM_COMPATIBLE"
+    },
+    "upper body ergometer": {
+      "enum": "UPPER_BODY_ERGOMETER",
+      "requirements": ["UPPER_BODY_ERGOMETER"],
+      "location": "GYM_COMPATIBLE"
+    }
+  }
+}

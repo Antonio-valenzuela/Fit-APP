@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="1" failures="0" errors="0" skipped="0" time="21.992" timestamp="2026-07-15T21:09:22" hostname="localhost">
+  <testsuite name="com.example.CompleteWorkoutInstrumentedTest" tests="1" failures="0" errors="0" skipped="0" time="18.878" timestamp="2026-07-15T21:09:22" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="completesSavesShowsHistoryAndRejectsDuplicateSave" classname="com.example.CompleteWorkoutInstrumentedTest" time="18.878" />
+  </testsuite>
+</testsuites>

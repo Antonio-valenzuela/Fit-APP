@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="10" failures="0" errors="0" skipped="0" time="76.282" timestamp="2026-07-15T21:46:58" hostname="localhost">
+  <testsuite name="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="3.262" timestamp="2026-07-15T21:46:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="migration10To11PreservesSentinelRowsAndCreatesAllCatalogTables" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="3.097" />
+    <testcase name="searchIndexFollowsContentEntityForInsertUpdateDeleteAndRebuild" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="0.165" />
+  </testsuite>
+  <testsuite name="com.example.ExerciseCatalogBootstrapInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="14.379" timestamp="2026-07-15T21:46:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtersAndSpanishAliasesWorkAfterBootstrap" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="9.067" />
+    <testcase name="bootstrapRollsBackOnCanonicalConflict" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="0.635" />
+    <testcase name="bootstrapIsIdempotentAndKeepsExpectedMappingsAndCanonicals" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="4.677" />
+  </testsuite>
+  <testsuite name="com.example.HomeVsGymInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="24.461" timestamp="2026-07-15T21:46:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="gymProfileSelectsGymAndShowsGymRoutineEvenAtThirtyMinutes" classname="com.example.HomeVsGymInstrumentedTest" time="14.966" />
+    <testcase name="homeProfileSelectsHomeAndShowsHomeRoutine" classname="com.example.HomeVsGymInstrumentedTest" time="9.495" />
+  </testsuite>
+  <testsuite name="com.example.ExerciseCatalogUiInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="18.57" timestamp="2026-07-15T21:46:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="featureFlagDisabledKeepsCatalogEntryHidden" classname="com.example.ExerciseCatalogUiInstrumentedTest" time="5.221" />
+    <testcase name="featureFlagEnabledSupportsSearchFiltersDetailAndReopen" classname="com.example.ExerciseCatalogUiInstrumentedTest" time="13.349" />
+  </testsuite>
+  <testsuite name="com.example.CompleteWorkoutInstrumentedTest" tests="1" failures="0" errors="0" skipped="0" time="10.464" timestamp="2026-07-15T21:46:58" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="completesSavesShowsHistoryAndRejectsDuplicateSave" classname="com.example.CompleteWorkoutInstrumentedTest" time="10.464" />
+  </testsuite>
+</testsuites>

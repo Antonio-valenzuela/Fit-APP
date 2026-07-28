@@ -16,6 +16,10 @@ import com.example.data.model.MuscleTrainingProfiles.GENERAL_TRAINING_PROFILE
 import com.example.data.model.MuscleTrainingProfiles.MOBILITY_PROFILE
 import com.example.data.model.UserEntity
 import com.example.data.model.WorkoutLogEntity
+import com.example.data.model.normalizeExerciseSearchText
+import com.example.features.musclemap.domain.ExerciseNameCandidates
+import com.example.features.musclemap.domain.ExerciseTextParser
+import com.example.features.musclemap.domain.repository.CatalogMuscleMatch
 import com.example.features.musclemap.domain.repository.MuscleMapRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,15 +87,23 @@ class MuscleMapViewModel @Inject constructor(
         }
     }
 
-    private fun buildUiState(workouts: List<WorkoutLogEntity>, user: UserEntity?): MuscleMapUiState {
+    private suspend fun buildUiState(workouts: List<WorkoutLogEntity>, user: UserEntity?): MuscleMapUiState {
         val recentCutoff = System.currentTimeMillis() - DAYS_28_MS
         val recentWorkouts = workouts.filter { it.timestamp >= recentCutoff }
+        val candidatesByWorkout = recentWorkouts.map { workout ->
+            workout to ExerciseTextParser.parse(workout.exercisesText)
+        }
+        val candidateKeys = linkedSetOf<String>()
+        candidatesByWorkout.forEach { (_, candidates) ->
+            candidates.forEach { candidate -> candidateKeys.addAll(candidate.allKeys) }
+        }
+        val catalogMatches = repository.bulkResolveExerciseMuscles(candidateKeys)
         val volumeByMuscle = mutableMapOf<Muscle, Float>()
         val sessionsByMuscle = mutableMapOf<Muscle, MutableSet<Long>>()
         val lastTrainedByMuscle = mutableMapOf<Muscle, Long>()
 
-        for (workout in recentWorkouts) {
-            val parsed = parseWorkout(workout)
+        for ((workout, candidates) in candidatesByWorkout) {
+            val parsed = parseWorkout(workout, candidates, catalogMatches)
             for ((muscle, activation) in parsed.muscles) {
                 val adjusted = parsed.volume * activation
                 volumeByMuscle[muscle] = (volumeByMuscle[muscle] ?: 0f) + adjusted
@@ -125,27 +137,77 @@ class MuscleMapViewModel @Inject constructor(
         )
     }
 
-    private fun parseWorkout(workout: WorkoutLogEntity): ParsedWorkout {
-        val text = normalize("${workout.routineName} ${workout.exercisesText}")
-        val sets = parseNumberAfterLabel(text, "series")?.toInt()?.coerceAtLeast(1) ?: 3
-        val reps = parseNumberAfterLabel(text, "reps")?.toInt()?.coerceAtLeast(1) ?: 10
-        val weight = parseNumberAfterLabel(text, "peso")?.coerceAtLeast(1f) ?: 1f
-        val rpe = parseNumberAfterLabel(text, "rpe")?.coerceIn(1f, 10f) ?: 7f
+    private fun parseWorkout(
+        workout: WorkoutLogEntity,
+        candidates: List<ExerciseNameCandidates>,
+        catalogMatches: Map<String, CatalogMuscleMatch>
+    ): ParsedWorkout {
+        val metricsText = normalize(workout.exercisesText)
+        val sets = parseNumberAfterLabel(metricsText, "series")?.toInt()?.coerceAtLeast(1) ?: 3
+        val reps = parseNumberAfterLabel(metricsText, "reps")?.toInt()?.coerceAtLeast(1) ?: 10
+        val weight = parseNumberAfterLabel(metricsText, "peso")?.coerceAtLeast(1f) ?: 1f
+        val rpe = parseNumberAfterLabel(metricsText, "rpe")?.coerceIn(1f, 10f) ?: 7f
         val baseVolume = (sets * reps * weight * (0.75f + rpe / 20f)).coerceAtLeast(workout.durationMinutes * 4f)
 
-        val directMatches = EXERCISE_MUSCLE_MAP.filterKeys { exercise ->
-            text.contains(normalize(exercise))
+        val activationsByMuscle = linkedMapOf<Muscle, Float>()
+        var hasExerciseMatch = false
+        candidates.forEach { candidate ->
+            val resolved = resolveCandidate(candidate, catalogMatches)
+            hasExerciseMatch = hasExerciseMatch || resolved.matched
+            resolved.activations.forEach { (muscle, activation) ->
+                activationsByMuscle[muscle] = (activationsByMuscle[muscle] ?: 0f) + activation
+            }
         }
 
-        val muscles = when {
-            directMatches.isNotEmpty() -> directMatches.values.flatten()
-            text.contains("cardio") -> CARDIO_PROFILE
-            text.contains("movilidad") || text.contains("postura") -> MOBILITY_PROFILE
-            text.contains("fuerza") -> FUNCTIONAL_STRENGTH_PROFILE
-            else -> GENERAL_TRAINING_PROFILE
+        val muscles = if (hasExerciseMatch) {
+            activationsByMuscle.entries
+                .sortedBy { it.key.ordinal }
+                .map { it.key to it.value }
+        } else {
+            val profileText = normalize("${workout.routineName} ${workout.exercisesText}")
+            when {
+                profileText.contains("cardio") -> CARDIO_PROFILE
+                profileText.contains("movilidad") || profileText.contains("postura") -> MOBILITY_PROFILE
+                profileText.contains("fuerza") -> FUNCTIONAL_STRENGTH_PROFILE
+                else -> GENERAL_TRAINING_PROFILE
+            }
         }
 
         return ParsedWorkout(volume = baseVolume, muscles = muscles)
+    }
+
+    private fun resolveCandidate(
+        candidate: ExerciseNameCandidates,
+        catalogMatches: Map<String, CatalogMuscleMatch>
+    ): ResolvedCandidate {
+        catalogMatches[candidate.whole]?.let { wholeMatch ->
+            return ResolvedCandidate(matched = true, activations = wholeMatch.activations)
+        }
+
+        var matched = false
+        val activations = mutableListOf<Pair<Muscle, Float>>()
+        val fallbackKeys = candidate.commaFallbacks.ifEmpty { listOf(candidate.whole) }
+        fallbackKeys.forEach { fallbackKey ->
+            val catalogMatch = catalogMatches[fallbackKey]
+            if (catalogMatch != null) {
+                matched = true
+                activations += catalogMatch.activations
+            } else {
+                val legacyMatch = findLegacyMatch(fallbackKey)
+                if (legacyMatch != null) {
+                    matched = true
+                    activations += legacyMatch
+                }
+            }
+        }
+        return ResolvedCandidate(matched = matched, activations = activations)
+    }
+
+    private fun findLegacyMatch(candidateKey: String): List<Pair<Muscle, Float>>? {
+        val paddedCandidate = " $candidateKey "
+        return LEGACY_EXERCISE_MATCHES.firstOrNull { (key, _) ->
+            paddedCandidate.contains(" $key ")
+        }?.second
     }
 
     private fun detectImbalances(volumes: Map<Muscle, Float>): List<MuscleImbalance> {
@@ -219,7 +281,16 @@ class MuscleMapViewModel @Inject constructor(
         val muscles: List<Pair<Muscle, Float>>
     )
 
+    private data class ResolvedCandidate(
+        val matched: Boolean,
+        val activations: List<Pair<Muscle, Float>>
+    )
+
     companion object {
         private const val DAYS_28_MS = 28L * 24L * 60L * 60L * 1000L
+        private val LEGACY_EXERCISE_MATCHES = EXERCISE_MUSCLE_MAP.entries
+            .map { (key, activations) -> normalizeExerciseSearchText(key) to activations }
+            .sortedWith(compareByDescending<Pair<String, List<Pair<Muscle, Float>>>> { it.first.length }
+                .thenBy { it.first })
     }
 }

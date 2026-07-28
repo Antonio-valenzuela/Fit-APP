@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.analytics.ProductAnalytics
+import com.example.data.model.TrainingPlanRules
 import com.example.data.model.UserDiscipline
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.frostedMeshBackground
@@ -45,9 +46,9 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
     var selectedDiscipline by remember { mutableStateOf(UserDiscipline.GYM) }
     var level by remember { mutableStateOf("Principiante") }
     var trainingDays by remember { mutableStateOf("3") }
-    var trainingPlace by remember { mutableStateOf("Casa y gimnasio") }
-    var equipment by remember { mutableStateOf("Peso corporal") }
-    var intensity by remember { mutableStateOf("Moderada") }
+    var trainingPlace by remember { mutableStateOf("Ambos") }
+    var equipment by remember { mutableStateOf(TrainingPlanRules.equipmentFor("Ambos")) }
+    var intensity by remember { mutableStateOf(TrainingPlanRules.intensityFor("Principiante")) }
     var weeklyGoal by remember { mutableStateOf("Completar 3 entrenamientos") }
     var limitations by remember { mutableStateOf("") }
 
@@ -61,6 +62,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("onboarding_step_$step")
             .frostedMeshBackground(isDark)
             .padding(16.dp)
     ) {
@@ -128,7 +130,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                 onValueChange = { age = it },
                                 label = { Text("Edad") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().testTag("onboarding_age"),
                                 singleLine = true
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -139,7 +141,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                 onValueChange = { weight = it },
                                 label = { Text("Peso actual (kg)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().testTag("onboarding_weight"),
                                 singleLine = true
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -150,7 +152,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                 onValueChange = { height = it },
                                 label = { Text("Estatura (cm)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().testTag("onboarding_height"),
                                 singleLine = true
                             )
                             Spacer(modifier = Modifier.height(16.dp))
@@ -193,6 +195,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
+                            .testTag("onboarding_next_step_1")
                     ) {
                         Text("Siguiente")
                     }
@@ -237,6 +240,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 4.dp)
+                                        .testTag("onboarding_discipline_${discipline.name}")
                                         .clickable {
                                             selectedDiscipline = discipline
                                             ProductAnalytics.track("discipline_selected", mapOf("discipline" to discipline.name))
@@ -315,6 +319,7 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .testTag("onboarding_goal_${g.replace(' ', '_').replace('/', '_')}")
                                             .clickable {
                                                 goal = g
                                                 ProductAnalytics.track("goal_selected", mapOf("goal" to g))
@@ -344,7 +349,10 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { step = 1 }, modifier = Modifier.weight(1f)) { Text("Atrás") }
-                        Button(onClick = { step = 3 }, modifier = Modifier.weight(1.5f)) { Text("Siguiente") }
+                        Button(
+                            onClick = { step = 3 },
+                            modifier = Modifier.weight(1.5f).testTag("onboarding_next_step_2")
+                        ) { Text("Siguiente") }
                     }
                 }
 
@@ -375,11 +383,16 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                             Text("Nivel", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf("Principiante", "Intermedio", "Avanzado").forEach { option ->
-                                    FilterChip(
-                                        selected = level == option,
-                                        onClick = { level = option },
-                                        label = { Text(option, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                        modifier = Modifier.weight(1f)
+                                     FilterChip(
+                                         selected = level == option,
+                                         onClick = {
+                                             level = option
+                                             intensity = TrainingPlanRules.intensityFor(option)
+                                         },
+                                         label = { Text(option, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                         modifier = Modifier
+                                             .weight(1f)
+                                             .testTag("onboarding_level_$option")
                                     )
                                 }
                             }
@@ -389,11 +402,12 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                 listOf("2", "3", "4", "5", "6").forEach { option ->
                                     FilterChip(
                                         selected = trainingDays == option,
-                                        onClick = {
-                                            trainingDays = option
-                                            weeklyGoal = "Completar $option entrenamientos"
-                                        },
-                                        label = { Text(option) }
+                                         onClick = {
+                                             trainingDays = option
+                                             weeklyGoal = TrainingPlanRules.weeklyGoalFor(option)
+                                         },
+                                         label = { Text(option) },
+                                         modifier = Modifier.testTag("onboarding_days_$option")
                                     )
                                 }
                             }
@@ -403,9 +417,12 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                                 listOf("Casa", "Gimnasio", "Ambos").forEach { option ->
                                     FilterChip(
                                         selected = trainingPlace == option,
-                                        onClick = { trainingPlace = option },
+                                         onClick = {
+                                             trainingPlace = option
+                                             equipment = TrainingPlanRules.equipmentFor(option)
+                                         },
                                         label = { Text(option) },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f).testTag("onboarding_place_${option.replace(' ', '_')}")
                                     )
                                 }
                             }
@@ -413,24 +430,27 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                             OutlinedTextField(
                                 value = equipment,
                                 onValueChange = { equipment = it },
-                                label = { Text("Equipo disponible") },
-                                modifier = Modifier.fillMaxWidth(),
+                                 label = { Text("Equipo disponible") },
+                                 supportingText = { Text("Se actualiza al cambiar el lugar") },
+                                 modifier = Modifier.fillMaxWidth().testTag("onboarding_equipment"),
                                 singleLine = true
                             )
 
                             OutlinedTextField(
                                 value = intensity,
                                 onValueChange = { intensity = it },
-                                label = { Text("Intensidad") },
-                                modifier = Modifier.fillMaxWidth(),
+                                 label = { Text("Intensidad") },
+                                 supportingText = { Text("Se actualiza al cambiar el nivel") },
+                                 modifier = Modifier.fillMaxWidth().testTag("onboarding_intensity"),
                                 singleLine = true
                             )
 
                             OutlinedTextField(
                                 value = weeklyGoal,
                                 onValueChange = { weeklyGoal = it },
-                                label = { Text("Meta semanal") },
-                                modifier = Modifier.fillMaxWidth(),
+                                 label = { Text("Meta semanal") },
+                                 supportingText = { Text("Se actualiza al cambiar los días disponibles") },
+                                 modifier = Modifier.fillMaxWidth().testTag("onboarding_weekly_goal"),
                                 singleLine = false,
                                 minLines = 1,
                                 maxLines = 2
@@ -439,8 +459,8 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                             OutlinedTextField(
                                 value = limitations,
                                 onValueChange = { limitations = it },
-                                label = { Text("Restricciones o molestias (opcional)") },
-                                modifier = Modifier.fillMaxWidth(),
+                                 label = { Text("Restricciones o molestias (opcional)") },
+                                 modifier = Modifier.fillMaxWidth().testTag("onboarding_limitations"),
                                 minLines = 2
                             )
                         }
@@ -450,7 +470,10 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { step = 2 }, modifier = Modifier.weight(1f)) { Text("Atrás") }
-                        Button(onClick = { step = 4 }, modifier = Modifier.weight(1.5f)) { Text("Siguiente") }
+                        Button(
+                            onClick = { step = 4 },
+                            modifier = Modifier.weight(1.5f).testTag("onboarding_next_step_3")
+                        ) { Text("Siguiente") }
                     }
                 }
 
@@ -522,7 +545,8 @@ fun OnboardingScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) 
                             ) {
                                 Checkbox(
                                     checked = disclaimerAccepted,
-                                    onCheckedChange = { disclaimerAccepted = it }
+                                    onCheckedChange = { disclaimerAccepted = it },
+                                    modifier = Modifier.testTag("onboarding_disclaimer")
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(

@@ -2,32 +2,81 @@
 
 const jwt = require('jsonwebtoken')
 
+function audit(req, event, fields) {
+  req.app?.locals?.securityLogger?.audit?.(event, fields)
+}
+
+function unauthorized(req, res, reason) {
+  audit(req, 'auth.failure', { reason })
+  return res.status(401).json({ error: 'Unauthorized' })
+}
+
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
+  const authHeader = req.headers?.authorization
+  const match = typeof authHeader === 'string' && authHeader.match(/^Bearer\s+(\S+)$/i)
+  const token = match?.[1]
 
   if (!token) {
-    return res.status(401).json({ error: 'Token no proveido' })
+    return unauthorized(req, res, 'missing_bearer_token')
   }
 
-  // Check if static backend API key matches
-  const backendApiKey = process.env.BACKEND_API_KEY || 'fitplan_secret_key_123'
-  if (token === backendApiKey) {
-    req.user = { id: 'default_admin_user' }
+  const config = req.app?.locals?.securityConfig
+  if (!config) return next(new Error('Security configuration unavailable'))
+
+  try {
+    const claims = jwt.verify(token, config.jwtSecret, {
+      algorithms: config.jwtAlgorithms,
+      issuer: config.jwtIssuer,
+      audience: config.jwtAudience
+    })
+    if (typeof claims !== 'object' || typeof claims.sub !== 'string' || !claims.sub.trim() || claims.sub !== claims.sub.trim() || claims.sub.length > 255 || !Number.isFinite(claims.exp)) {
+      return unauthorized(req, res, 'invalid_required_claims')
+    }
+    const roles = Array.isArray(claims.roles)
+      ? [...new Set(claims.roles.filter(role => typeof role === 'string' && role.trim()).map(role => role.trim()))]
+      : []
+    const subject = claims.sub
+    req.auth = Object.freeze({ subject, roles: Object.freeze(roles) })
+    req.user = Object.freeze({ id: subject, roles: req.auth.roles })
+    audit(req, 'auth.success')
+    return next()
+  } catch (error) {
+    return unauthorized(req, res, error?.name === 'TokenExpiredError' ? 'token_expired' : 'token_invalid')
+  }
+}
+
+async function ensureAuthenticatedPrincipal(req, res, next) {
+  const database = req.app?.locals?.database
+  if (!database?.query || !req.auth?.subject) {
+    return next(new Error('Authenticated principal persistence unavailable'))
+  }
+  try {
+    await database.query(
+      'INSERT IGNORE INTO auth_principals (subject) VALUES (?)',
+      [req.auth.subject]
+    )
+    return next()
+  } catch (error) {
+    return next(error)
+  }
+}
+
+function requireRole(requiredRole) {
+  if (typeof requiredRole !== 'string' || !requiredRole.trim()) {
+    throw new TypeError('requiredRole must be a non-empty string')
+  }
+  return function authorizeRole(req, res, next) {
+    if (!req.auth?.roles?.includes(requiredRole)) {
+      audit(req, 'authz.denied', { requiredRole })
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+    audit(req, 'authz.granted', { requiredRole })
     return next()
   }
-
-  // Fallback to JWT verification
-  const jwtSecret = process.env.JWT_SECRET || 'jwt_secret_fallback_456'
-  jwt.verify(token, jwtSecret, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Token invalido o expirado' })
-    }
-    req.user = user
-    next()
-  })
 }
 
 module.exports = {
-  authenticateToken
+  authenticateToken,
+  ensureAuthenticatedPrincipal,
+  requireRole
 }

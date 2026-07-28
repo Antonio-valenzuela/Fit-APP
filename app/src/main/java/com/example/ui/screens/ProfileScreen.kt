@@ -72,7 +72,7 @@ fun ProfileScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("profile_screen").frostedMeshBackground(isDark),
         bottomBar = { FitPlanBottomBar(Destinations.PROFILE, onNavigate, isPremium, discipline) }
     ) { innerPadding ->
         Column(
@@ -276,16 +276,14 @@ fun ProfileScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
                     ProfileNavRow(
                         text = "Ajustes de inicio y recordatorios",
-                        onClick = { onNavigate(Destinations.SETTINGS) }
+                        onClick = { onNavigate(Destinations.SETTINGS) },
+                        modifier = Modifier.testTag("open_settings_button")
                     )
                     HorizontalDivider()
 
                     ProfileNavRow(
                         text = "Actualizar mis datos",
-                        onClick = {
-                            viewModel.restartOnboarding()
-                            onNavigate(Destinations.ONBOARDING)
-                        }
+                        onClick = { onNavigate(Destinations.SETTINGS) }
                     )
                 }
             }
@@ -319,7 +317,7 @@ fun ProfileScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
             OutlinedButton(
                 onClick = { viewModel.logoutUser() },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("logout_button")
             ) {
                 Text("Cerrar sesión")
             }
@@ -351,9 +349,9 @@ private fun FitCoreActionButton(
 }
 
 @Composable
-private fun ProfileNavRow(text: String, onClick: () -> Unit) {
+private fun ProfileNavRow(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(16.dp),

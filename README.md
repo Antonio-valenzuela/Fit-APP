@@ -73,20 +73,36 @@ Para release firmado, consulta `docs/release-signing.md`.
 No subas claves reales al repositorio. Para proteger la API Key de Gemini y evitar que sea extraíble del APK, la aplicación móvil utiliza un **backend proxy Express** local/remoto.
 
 ### Configuración del Backend Proxy (.env)
-En el servidor o entorno local, crea un archivo `.env` con:
+En el servidor, inyecta las variables desde el gestor de secretos del proveedor. El
+backend falla antes de escuchar tráfico si falta configuración crítica o si no puede
+verificar la conexión MySQL. Usa `.env.example` sólo como lista de nombres; deja los
+secretos fuera del repositorio. `.env.backend.example` enumera las variables del
+servidor; no copies secretos backend al `.env` que consume Android.
+
+Variables obligatorias de producción:
 ```env
+NODE_ENV=production
 PORT=3000
-GEMINI_API_KEY=YOUR_REAL_GEMINI_API_KEY
-BACKEND_API_KEY=fitplan_secret_key_123
-GEMINI_TIMEOUT_MS=60000
+JWT_SECRET=<secret-manager>
+JWT_ISSUER=https://identity.example.com
+JWT_AUDIENCE=fitplan-backend
+JWT_ALGORITHMS=HS256
+GEMINI_API_KEY=<secret-manager>
+CORS_ALLOWED_ORIGINS=https://app.example.com
+TRUST_PROXY_HOPS=1
+DATABASE_URL=<secret-manager>
+DATABASE_TLS=verify_identity
+RATE_LIMIT_STORE=mysql
+GOOGLE_OAUTH_CLIENT_ID=<public-google-web-client-id>
 ```
 > [!IMPORTANT]
 > **Rotación de Claves:** Por seguridad, la API Key de Gemini debe rotarse periódicamente de manera manual en la **Consola de Google Cloud Platform (GCP)**. No compartas ni almacenes esta clave en el código Android.
 
 ### Configuración de la App Android (.env de Android)
-La app móvil se comunica con el proxy y se autentica usando la API key del backend:
+La app móvil intercambia un Google ID token verificable con
+`POST /api/auth/google` y usa el JWT interno devuelto como `Authorization: Bearer`.
+No existe una API key estática compartida entre instalaciones.
 ```env
-BACKEND_API_KEY=fitplan_secret_key_123
 GOOGLE_WEB_CLIENT_ID=MY_GOOGLE_WEB_CLIENT_ID
 PREMIUM_SUBSCRIPTION_ID=fitplan_premium_monthly
 ```

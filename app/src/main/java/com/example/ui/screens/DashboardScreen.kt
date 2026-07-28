@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -132,11 +133,11 @@ fun DashboardScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = if (profile.gradientsEnabled) {
+        modifier = (if (profile.gradientsEnabled) {
             Modifier.frostedMeshBackground(isDark)
         } else {
             Modifier.background(MaterialTheme.colorScheme.background)
-        },
+        }).testTag("dashboard_screen"),
         bottomBar = { FitPlanBottomBar(Destinations.DASHBOARD, onNavigate, effectiveIsPremium, discipline) }
     ) { innerPadding ->
         Column(
@@ -355,7 +356,7 @@ private fun QuickStatusLine(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("dashboard_quick_$label"),
         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
     ) {
         Row(

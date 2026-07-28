@@ -5,9 +5,29 @@ import androidx.room.Index
 import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 
+const val LEGACY_OWNER_ID = "legacy_owner_v1"
+
+fun isValidOwnerId(ownerId: String?): Boolean {
+    if (ownerId == LEGACY_OWNER_ID) return true
+    return ownerId?.matches(Regex("^(local|google)_[0-9a-f]{40}$")) == true
+}
+
+fun requireActiveOwnerForWrite(
+    activeOwnerId: String?,
+    entityOwnerId: String,
+    hasPersistentId: Boolean
+): String {
+    val activeOwner = activeOwnerId?.takeIf(::isValidOwnerId)
+        ?: throw SecurityException("A validated local owner session is required")
+    if (hasPersistentId && entityOwnerId != activeOwner) {
+        throw SecurityException("Cross-owner writes are not permitted")
+    }
+    return activeOwner
+}
+
 @Entity(tableName = "users")
 data class UserEntity(
-    @PrimaryKey val uid: String = "local_user",
+    @PrimaryKey val uid: String = "",
     val name: String = "",
     val email: String = "",
     val age: Int = 25,
@@ -26,21 +46,57 @@ data class UserEntity(
     val trainingDiscipline: String = UserDiscipline.GYM.name
 )
 
-fun UserEntity.getTrainingPlace(): String {
+private fun UserEntity.getTrainingPlanValue(label: String, fallback: String): String {
     val parts = goal.split("|")
     for (part in parts) {
         val trimmed = part.trim()
-        if (trimmed.startsWith("Lugar:", ignoreCase = true)) {
-            return trimmed.substringAfter("Lugar:").trim()
+        if (trimmed.startsWith("$label:", ignoreCase = true)) {
+            return trimmed.substringAfter(":").trim().ifBlank { fallback }
         }
     }
-    return "Ambos"
+    return fallback
 }
+
+fun normalizeTrainingPlace(trainingPlace: String?): String = when (
+    trainingPlace?.trim()?.lowercase()
+) {
+    "casa" -> "Casa"
+    "gimnasio" -> "Gimnasio"
+    else -> "Ambos"
+}
+
+fun String.withTrainingPlace(trainingPlace: String?): String {
+    val preservedSegments = split("|")
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .filterNot { segment ->
+            segment.substringBefore(":").trim().equals("Lugar", ignoreCase = true) &&
+                segment.contains(":")
+        }
+
+    return (preservedSegments + "Lugar: ${normalizeTrainingPlace(trainingPlace)}")
+        .joinToString(" | ")
+}
+
+fun String.withCanonicalTrainingPlace(trainingPlace: String?): String =
+    withTrainingPlace(trainingPlace)
+
+fun UserEntity.getTrainingPlace(): String =
+    normalizeTrainingPlace(getTrainingPlanValue(label = "Lugar", fallback = "Ambos"))
+
+fun UserEntity.getTrainingLevel(): String =
+    getTrainingPlanValue(label = "Nivel", fallback = "Principiante")
+
+fun UserEntity.getTrainingDays(): String =
+    getTrainingPlanValue(label = "Días", fallback = "3")
+
+fun UserEntity.getTrainingLimitations(): String =
+    getTrainingPlanValue(label = "Restricciones", fallback = "Ninguna")
 
 
 @Entity(
     tableName = "food_logs",
-    indices = [Index("timestamp")]
+    indices = [Index(value = ["ownerId", "timestamp"])]
 )
 data class FoodLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -50,12 +106,18 @@ data class FoodLogEntity(
     val proteinG: Float,
     val carbsG: Float,
     val fatG: Float,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(
     tableName = "food_entries",
-    indices = [Index("dateKey"), Index("mealType"), Index("barcode")]
+    indices = [
+        Index(value = ["ownerId", "dateKey"]),
+        Index(value = ["ownerId", "mealType"]),
+        Index(value = ["ownerId", "barcode"])
+    ]
 )
 data class FoodEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -75,12 +137,18 @@ data class FoodEntryEntity(
     val barcode: String? = null,
     val notes: String = "",
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(
     tableName = "food_items",
-    indices = [Index(value = ["barcode"], unique = true), Index("isFavorite"), Index("name")]
+    indices = [
+        Index(value = ["ownerId", "barcode"], unique = true),
+        Index(value = ["ownerId", "isFavorite"]),
+        Index(value = ["ownerId", "name"])
+    ]
 )
 data class FoodItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -98,12 +166,14 @@ data class FoodItemEntity(
     val servingLabel: String = "Plato normal",
     val isFavorite: Boolean = false,
     val isCustom: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(
     tableName = "workout_logs",
-    indices = [Index("timestamp")]
+    indices = [Index(value = ["ownerId", "timestamp"])]
 )
 data class WorkoutLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -111,12 +181,17 @@ data class WorkoutLogEntity(
     val durationMinutes: Int,
     val caloriesBurned: Int,
     val exercisesText: String, // Lista separada por comas de ejercicios realizados
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(
     tableName = "activity_sessions",
-    indices = [Index("discipline"), Index("timestamp")]
+    indices = [
+        Index(value = ["ownerId", "discipline"]),
+        Index(value = ["ownerId", "timestamp"])
+    ]
 )
 data class ActivitySessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -142,12 +217,17 @@ data class ActivitySessionEntity(
     @ColumnInfo(defaultValue = "local_manual")
     val source: String = "local_manual",
     val notes: String = "",
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(
     tableName = "health_logs",
-    indices = [Index("timestamp"), Index("dateKey")]
+    indices = [
+        Index(value = ["ownerId", "timestamp"]),
+        Index(value = ["ownerId", "dateKey"])
+    ]
 )
 data class HealthLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -191,7 +271,9 @@ data class HealthLogEntity(
     @ColumnInfo(defaultValue = "0")
     val steps: Int = 0,
     val weightKg: Float = 0.0f, // Peso corporal registrado
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "legacy_owner_v1")
+    val ownerId: String = LEGACY_OWNER_ID
 )
 
 @Entity(

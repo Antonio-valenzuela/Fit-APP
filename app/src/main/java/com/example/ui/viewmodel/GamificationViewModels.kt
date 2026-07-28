@@ -9,6 +9,7 @@ import com.example.data.model.AchievementEntity
 import com.example.data.model.DailyActivityEntity
 import com.example.data.model.DailyMissionEntity
 import com.example.data.model.StreakEntity
+import com.example.data.model.isValidOwnerId
 import com.example.data.repository.*
 import com.example.ui.components.MotivationMessageProvider
 import kotlinx.coroutines.flow.*
@@ -43,6 +44,12 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun refreshStreak() {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId)
+        if (ownerId == null) {
+            _streakState.value = null
+            _uiState.value = MotivationUiState()
+            return
+        }
         val features = prefs.getFeatureSettings()
         if (!features.streakEnabled) {
             _uiState.value = MotivationUiState()
@@ -52,14 +59,14 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val streak = streakManager.checkAndRefreshStreakStatus("local_user")
+                val streak = streakManager.checkAndRefreshStreakStatus(ownerId)
                 _streakState.value = streak
 
                 val todayStr = LocalDateUtils.getTodayString()
-                val todayActivity = activityRepo.getActivityForDay("local_user", todayStr)
+                val todayActivity = activityRepo.getActivityForDay(ownerId, todayStr)
                 val hasCheckIn = todayActivity?.hasCheckIn == true
 
-                val todayMissions = db.dailyMissionDao().getMissionsForDay("local_user", todayStr)
+                val todayMissions = db.dailyMissionDao().getMissionsForDay(ownerId, todayStr)
                 val comp = todayMissions.count { it.completed }
                 val tot = todayMissions.size
 
@@ -88,12 +95,13 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun performDailyCheckIn() {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId) ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val todayStr = LocalDateUtils.getTodayString()
-                val currentActivity = activityRepo.getActivityForDay("local_user", todayStr) ?: DailyActivityEntity(
-                    userId = "local_user",
+                val currentActivity = activityRepo.getActivityForDay(ownerId, todayStr) ?: DailyActivityEntity(
+                    userId = ownerId,
                     date = todayStr,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
@@ -105,46 +113,46 @@ class StreakViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 activityRepo.saveActivity(updatedActivity)
 
-                val (streakVal, wasReset) = streakManager.updateStreak("local_user")
+                val (streakVal, wasReset) = streakManager.updateStreak(ownerId)
 
                 val missionRepo = DailyMissionRepository(db.dailyMissionDao())
                 val achRepo = AchievementRepository(db.achievementDao())
                 val achManager = AchievementManager(achRepo)
                 val missionManager = DailyMissionManager(missionRepo, streakManager, achManager)
-                missionManager.triggerMissionCheck("local_user", "log_checkin")
+                missionManager.triggerMissionCheck(ownerId, "log_checkin")
 
                 // First check-in achievement check
-                val unlockedFirstLog = achManager.checkAndAward("local_user", "ach_first_checkin")
+                val unlockedFirstLog = achManager.checkAndAward(ownerId, "ach_first_checkin")
                 if (unlockedFirstLog != null) {
                     _uiState.update { it.copy(unlockedAchievement = unlockedFirstLog) }
                 }
 
                 if (streakVal >= 3) {
-                    val unlocked = achManager.checkAndAward("local_user", "ach_streak_3")
+                    val unlocked = achManager.checkAndAward(ownerId, "ach_streak_3")
                     if (unlocked != null) {
                         _uiState.update { it.copy(unlockedAchievement = unlocked) }
                     }
                 }
                 if (streakVal >= 7) {
-                    val unlocked = achManager.checkAndAward("local_user", "ach_streak_7")
+                    val unlocked = achManager.checkAndAward(ownerId, "ach_streak_7")
                     if (unlocked != null) {
                         _uiState.update { it.copy(unlockedAchievement = unlocked) }
                     }
                 }
                 if (streakVal >= 14) {
-                    val unlocked = achManager.checkAndAward("local_user", "ach_streak_14")
+                    val unlocked = achManager.checkAndAward(ownerId, "ach_streak_14")
                     if (unlocked != null) {
                         _uiState.update { it.copy(unlockedAchievement = unlocked) }
                     }
                 }
                 if (streakVal >= 30) {
-                    val unlocked = achManager.checkAndAward("local_user", "ach_streak_30")
+                    val unlocked = achManager.checkAndAward(ownerId, "ach_streak_30")
                     if (unlocked != null) {
                         _uiState.update { it.copy(unlockedAchievement = unlocked) }
                     }
                 }
                 if (wasReset) {
-                    val unlocked = achManager.checkAndAward("local_user", "ach_epic_return")
+                    val unlocked = achManager.checkAndAward(ownerId, "ach_epic_return")
                     if (unlocked != null) {
                         _uiState.update { it.copy(unlockedAchievement = unlocked) }
                     }
@@ -181,33 +189,41 @@ class DailyMissionViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun loadMissions() {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId)
+        if (ownerId == null) {
+            _missions.value = emptyList()
+            return
+        }
         if (!prefs.getFeatureSettings().dailyMissionsEnabled) {
             _missions.value = emptyList()
             return
         }
 
         viewModelScope.launch {
-            val list = missionManager.getMissionsForToday("local_user")
+            val list = missionManager.getMissionsForToday(ownerId)
             _missions.value = list
         }
     }
 
     fun forceToggleMission(mission: DailyMissionEntity) {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId) ?: return
+        if (mission.userId != ownerId) return
         viewModelScope.launch {
             val nextStatus = !mission.completed
             val timestamp = if (nextStatus) System.currentTimeMillis() else null
-            missionRepo.updateMissionStatus(mission.id, nextStatus, timestamp)
+            missionRepo.updateMissionStatus(ownerId, mission.id, nextStatus, timestamp)
 
             if (nextStatus) {
-                streakManager.updateStreak("local_user")
+                streakManager.updateStreak(ownerId)
             }
             loadMissions()
         }
     }
 
     fun completeMissionDirectly(key: String) {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId) ?: return
         viewModelScope.launch {
-            val didComplete = missionManager.triggerMissionCheck("local_user", key)
+            val didComplete = missionManager.triggerMissionCheck(ownerId, key)
             if (didComplete) {
                 loadMissions()
             }
@@ -228,13 +244,18 @@ class AchievementViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun loadAchievements() {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId)
+        if (ownerId == null) {
+            _achievements.value = emptyList()
+            return
+        }
         if (!prefs.getFeatureSettings().achievementsEnabled) {
             _achievements.value = emptyList()
             return
         }
 
         viewModelScope.launch {
-            val list = achRepo.getAchievements("local_user")
+            val list = achRepo.getAchievements(ownerId)
             _achievements.value = list
         }
     }

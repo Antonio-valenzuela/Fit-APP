@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="3" failures="0" errors="0" skipped="0" time="6.301" timestamp="2026-07-15T20:36:30" hostname="localhost">
+  <testsuite name="com.example.ExerciseCatalogBootstrapInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="5.348" timestamp="2026-07-15T20:36:30" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtersAndSpanishAliasesWorkAfterBootstrap" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="3.505" />
+    <testcase name="bootstrapRollsBackOnCanonicalConflict" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="0.324" />
+    <testcase name="bootstrapIsIdempotentAndKeepsExpectedMappingsAndCanonicals" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="1.519" />
+  </testsuite>
+</testsuites>

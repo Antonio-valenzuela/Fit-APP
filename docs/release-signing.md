@@ -1,43 +1,10 @@
-# FitPlan MX - Firma de release y secretos locales
+# Firma de release
 
-Este proyecto usa variables de entorno para firmar release:
+La configuracion canonica es fail-closed y usa un keystore protegido fuera del
+repositorio. Consulta:
 
-- `KEYSTORE_PATH`
-- `STORE_PASSWORD`
-- `KEY_ALIAS`
-- `KEY_PASSWORD`
+- `docs/security/secrets-setup.md` para migrar secretos conservando hash, identidad
+  y ACL.
+- `docs/security/release-signing.md` para generar y verificar el AAB firmado.
 
-## Archivos locales generados
-
-- `my-upload-key.jks`: upload key local.
-- `release-secrets.local.ps1`: variables de entorno locales para firmar.
-
-Ambos estan ignorados por git. No los subas a ningun repositorio ni los compartas publicamente.
-
-## Usar secretos locales
-
-En PowerShell, desde la raiz del proyecto:
-
-```powershell
-. .\release-secrets.local.ps1
-.\gradlew.bat :app:bundleRelease
-```
-
-El AAB firmado queda en:
-
-```text
-app\build\outputs\bundle\release\app-release.aab
-```
-
-## Verificar firma
-
-```powershell
-& 'C:\Program Files\Eclipse Adoptium\jdk-17.0.16.8-hotspot\bin\jarsigner.exe' -verify -verbose app\build\outputs\bundle\release\app-release.aab
-```
-
-Debe mostrar `jar verified`.
-
-## Cuidado
-
-Si pierdes el upload key o sus passwords, puedes quedar bloqueado para actualizar la app hasta pasar por recuperacion de Play App Signing. Guarda una copia segura fuera del proyecto.
-
+No uses keystores ni scripts de passwords ubicados en la raiz del proyecto.

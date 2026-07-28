@@ -66,6 +66,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -121,6 +122,7 @@ fun SettingsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showHealthNotice by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
+    var isSavingProfile by remember { mutableStateOf(false) }
     var editName by remember(user) { mutableStateOf(user?.name.orEmpty()) }
     var editAge by remember(user) { mutableStateOf(user?.age?.toString().orEmpty()) }
     var editWeight by remember(user) { mutableStateOf(user?.weightKg?.toString().orEmpty()) }
@@ -185,6 +187,7 @@ fun SettingsScreen(
 
     if (showDeleteDialog) {
         AlertDialog(
+            modifier = Modifier.testTag("delete_data_dialog"),
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Limpiar datos locales") },
             text = {
@@ -221,7 +224,8 @@ fun SettingsScreen(
 
     if (showEditProfileDialog) {
         AlertDialog(
-            onDismissRequest = { showEditProfileDialog = false },
+            modifier = Modifier.testTag("edit_profile_dialog"),
+            onDismissRequest = { if (!isSavingProfile) showEditProfileDialog = false },
             title = { Text("Editar perfil", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
@@ -232,7 +236,7 @@ fun SettingsScreen(
                         value = editName,
                         onValueChange = { editName = it },
                         label = { Text("Nombre") },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_name"),
                         singleLine = true
                     )
                     OutlinedTextField(
@@ -240,7 +244,7 @@ fun SettingsScreen(
                         onValueChange = { editAge = it },
                         label = { Text("Edad") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_age"),
                         singleLine = true
                     )
                     OutlinedTextField(
@@ -248,7 +252,7 @@ fun SettingsScreen(
                         onValueChange = { editWeight = it },
                         label = { Text("Peso (kg)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_weight"),
                         singleLine = true
                     )
                     OutlinedTextField(
@@ -256,7 +260,7 @@ fun SettingsScreen(
                         onValueChange = { editHeight = it },
                         label = { Text("Estatura (cm)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_height"),
                         singleLine = true
                     )
                     Text("Sexo", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
@@ -277,7 +281,9 @@ fun SettingsScreen(
                                 selected = editPlace == option,
                                 onClick = { editPlace = option },
                                 label = { Text(option, fontSize = 11.sp) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("edit_profile_place_${option.lowercase()}")
                             )
                         }
                     }
@@ -286,6 +292,7 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        if (isSavingProfile) return@Button
                         val aNum = editAge.toIntOrNull() ?: 25
                         val wNum = editWeight.toFloatOrNull() ?: 70.0f
                         val hNum = editHeight.toFloatOrNull() ?: 170.0f
@@ -293,50 +300,40 @@ fun SettingsScreen(
                             Toast.makeText(context, "Por favor revisa que todos los campos sean correctos", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        showEditProfileDialog = false
-                        val currentGoal = user?.goal.orEmpty()
-                        val newGoalString = if (currentGoal.contains("|")) {
-                            val parts = currentGoal.split("|").map { it.trim() }.toMutableList()
-                            var replaced = false
-                            for (i in parts.indices) {
-                                if (parts[i].startsWith("Lugar:", ignoreCase = true)) {
-                                    parts[i] = "Lugar: $editPlace"
-                                    replaced = true
-                                    break
-                                }
-                            }
-                            if (!replaced) {
-                                parts.add("Lugar: $editPlace")
-                            }
-                            parts.joinToString(" | ")
-                        } else {
-                            "$currentGoal | Lugar: $editPlace"
-                        }
-                        val parsedGoal = if (currentGoal.contains("|")) currentGoal.substringBefore("|").trim() else currentGoal
-                        viewModel.completeOnboarding(
+                        isSavingProfile = true
+                        viewModel.updateProfileFromSettings(
                             name = editName,
                             age = aNum,
                             weightKg = wNum,
                             heightCm = hNum,
                             gender = editGender,
-                            activityLevel = user?.activityLevel ?: "Moderado",
-                            goal = newGoalString,
-                            disclaimerAccepted = true,
-                            trainingDiscipline = user?.trainingDiscipline ?: UserDiscipline.GYM.name
-                        )
-                        Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
-                    }
-                ) { Text("Guardar") }
+                            trainingPlace = editPlace
+                        ) { result ->
+                            isSavingProfile = false
+                            result.onSuccess {
+                                showEditProfileDialog = false
+                                showMessage("Perfil actualizado.")
+                            }.onFailure {
+                                showMessage("No se pudo guardar el perfil. Intenta de nuevo.")
+                            }
+                        }
+                    },
+                    enabled = !isSavingProfile,
+                    modifier = Modifier.testTag("edit_profile_save")
+                ) { Text(if (isSavingProfile) "Guardando…" else "Guardar") }
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancelar") }
+                TextButton(
+                    onClick = { showEditProfileDialog = false },
+                    enabled = !isSavingProfile
+                ) { Text("Cancelar") }
             }
         )
     }
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("settings_screen").frostedMeshBackground(isDark),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -372,10 +369,8 @@ fun SettingsScreen(
                         title = "Editar perfil",
                         description = "Actualiza tu nombre, objetivo y datos base.",
                         icon = Icons.Default.FitnessCenter,
-                        onClick = {
-                            viewModel.restartOnboarding()
-                            onNavigate(Destinations.ONBOARDING)
-                        }
+                        onClick = { showEditProfileDialog = true },
+                        testTag = "settings_edit_profile"
                     )
                 }
             }
@@ -461,7 +456,8 @@ fun SettingsScreen(
                         title = "Modo rápido y diseño",
                         description = "Ajusta animaciones y gráficos según tu celular.",
                         icon = Icons.Default.Speed,
-                        onClick = { onNavigate(Destinations.PERFORMANCE_SETTINGS) }
+                        onClick = { onNavigate(Destinations.PERFORMANCE_SETTINGS) },
+                        testTag = "settings_open_performance"
                     )
                     HorizontalDivider()
                     SettingsToggleItem(
@@ -498,7 +494,8 @@ fun SettingsScreen(
                         title = if (isPremium) "Plan Premium activo" else "Activar Premium",
                         description = if (isPremium) "Tu suscripcion Premium esta activa." else "Pago seguro con Google Play Billing.",
                         icon = Icons.Default.Stars,
-                        onClick = { onNavigate(Destinations.PREMIUM) }
+                        onClick = { onNavigate(Destinations.PREMIUM) },
+                        testTag = "settings_open_premium"
                     )
                 }
             }
@@ -530,7 +527,8 @@ fun SettingsScreen(
                         title = "Ver aviso de salud",
                         description = "Lee cómo usar FitPlan de forma responsable.",
                         icon = Icons.Default.Info,
-                        onClick = { showHealthNotice = true }
+                        onClick = { showHealthNotice = true },
+                        testTag = "settings_open_health_notice"
                     )
                     HorizontalDivider()
                     SettingsActionItem(
@@ -545,7 +543,8 @@ fun SettingsScreen(
                         description = "Elimina perfil, registros y progreso de este dispositivo.",
                         icon = Icons.Default.Delete,
                         tint = AlertRed,
-                        onClick = { showDeleteDialog = true }
+                        onClick = { showDeleteDialog = true },
+                        testTag = "settings_open_delete_dialog"
                     )
                 }
             }
@@ -572,6 +571,26 @@ fun SettingsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
+
+                if (com.example.data.model.PremiumAccessPolicy.isTestMode) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.Stars, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "Versión de demostración — funciones premium habilitadas",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
 
                 Text(
                     text = "FitPlan MX v1.0",
@@ -837,11 +856,13 @@ private fun SettingsActionItem(
     description: String,
     icon: ImageVector,
     tint: Color = MaterialTheme.colorScheme.primary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    testTag: String = "settings_action_$title"
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(testTag)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

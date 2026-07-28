@@ -15,18 +15,37 @@
 .cxx
 local.properties
 .env
+.env.*
+!.env.example
+!.env.backend.example
 debug.keystore
 *.jks
 *.keystore
 *.p12
-release-secrets.local.ps1
-release-secrets.local.env
+*.pfx
+*.pem
+*.key
+release-secrets*.ps1
+!release-secrets.example.ps1
+release-secrets*.env
+
+# Common credential bundles and local package-manager auth
+credentials.json
+service-account*.json
+!service-account.example.json
+google-services.json
+.npmrc
+.pypirc
+/screenshots/
 
 # Local analysis and generated artifacts
 /.codegraph/
 /tree_fitplan.txt
 /*fitplan*.png
 /nutrition_*.png
+/logcat_live.txt
+/screen.png
+/screen_debug.png
 
 # Reproducible public Gemini benchmark binaries (metadata and scripts stay tracked)
 /test-data/gemini-food-benchmark/originals/

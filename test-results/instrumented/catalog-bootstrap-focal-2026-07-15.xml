@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="3" failures="0" errors="0" skipped="0" time="11.615" timestamp="2026-07-15T18:51:54" hostname="localhost">
+  <testsuite name="com.example.ExerciseCatalogBootstrapInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="10.276" timestamp="2026-07-15T18:51:54" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtersAndSpanishAliasesWorkAfterBootstrap" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="5.379" />
+    <testcase name="bootstrapRollsBackOnCanonicalConflict" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="0.264" />
+    <testcase name="bootstrapIsIdempotentAndKeepsExpectedMappingsAndCanonicals" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="4.633" />
+  </testsuite>
+</testsuites>

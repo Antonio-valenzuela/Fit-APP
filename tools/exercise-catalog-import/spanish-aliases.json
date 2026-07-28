@@ -1,0 +1,14 @@
+{
+  "abdominales": "crunch",
+  "curl de bíceps": "biceps_curl",
+  "dominadas": "pull_up",
+  "elevaciones laterales": "lateral_raise",
+  "flexiones": "push_up",
+  "lagartijas": "push_up",
+  "peso muerto": "romanian_deadlift",
+  "plancha": "plank",
+  "press de banca": "bench_press",
+  "remo": "barbell_row",
+  "sentadilla": "squat",
+  "zancadas": "lunges"
+}

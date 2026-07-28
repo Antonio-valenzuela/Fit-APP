@@ -66,6 +66,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.UserDiscipline
 import com.example.data.model.Muscle
+import com.example.data.model.getTrainingLevel
+import com.example.data.model.getTrainingLimitations
 import com.example.data.model.getTrainingPlace
 import com.example.ui.muscles.MuscleMapViewModel
 import com.example.ui.theme.AlertRed
@@ -78,7 +80,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 @Composable
-fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
+fun WorkoutScreen(
+    viewModel: GymViewModel,
+    onNavigate: (String) -> Unit,
+    catalogEnabled: Boolean = false
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val workouts = state.workouts
     val isPremium = state.isPremiumActive
@@ -100,6 +106,10 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
     var selectedTime by remember { mutableIntStateOf(30) }
     var selectedEquipment by remember { mutableStateOf("Sin equipo") }
     var selectedObjective by remember { mutableStateOf("Fuerza") }
+    val trainingLevel = remember(user?.goal) { user?.getTrainingLevel() ?: "Principiante" }
+    val trainingLimitations = remember(user?.goal) {
+        user?.getTrainingLimitations()?.takeUnless { it.equals("Ninguna", ignoreCase = true) }.orEmpty()
+    }
 
     LaunchedEffect(muscleState.recommendation?.muscle) {
         muscleState.recommendation?.muscle?.let { selectedMuscle = it }
@@ -111,7 +121,7 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
             selectedEquipment = when (trainingPlace) {
                 "Casa" -> "Casa"
                 "Gimnasio" -> "Gym"
-                else -> "Gym"
+                else -> "Ambos"
             }
         }
     }
@@ -162,16 +172,16 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
 
     val isDark = LocalThemeIsDark.current
     val recommendedMuscle = muscleState.recommendation?.muscle ?: selectedMuscle ?: Muscle.CHEST
-    val recommendedRoutine = remember(recommendedMuscle, selectedEquipment) {
-        TrainingCatalog.routineForMuscle(recommendedMuscle.legacyName, selectedEquipment)
+    val recommendedRoutine = remember(recommendedMuscle, selectedEquipment, trainingLevel) {
+        TrainingCatalog.routineForMuscle(recommendedMuscle.legacyName, selectedEquipment, trainingLevel)
     }
-    val filteredRoutines = remember(selectedTime, selectedEquipment, selectedObjective) {
-        TrainingCatalog.filteredRoutines(selectedTime, selectedEquipment, selectedObjective)
+    val filteredRoutines = remember(selectedTime, selectedEquipment, selectedObjective, trainingLevel) {
+        TrainingCatalog.filteredRoutines(selectedTime, selectedEquipment, selectedObjective, trainingLevel)
     }
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("workout_screen").frostedMeshBackground(isDark),
         bottomBar = { FitPlanBottomBar(Destinations.WORKOUT, onNavigate, isPremium, discipline) }
     ) { innerPadding ->
         if (activeRoutine != null) {
@@ -179,7 +189,8 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .testTag("active_workout_screen"),
                 routine = activeRoutine!!,
                 activeExerciseIndex = activeExerciseIndex,
                 completedSets = completedSets,
@@ -237,6 +248,16 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (trainingLimitations.isNotBlank()) {
+                        Text(
+                            text = "Ten en cuenta tus restricciones: $trainingLimitations",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .testTag("workout_limitations_warning")
+                        )
+                    }
                 }
 
                 item {
@@ -276,6 +297,21 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                             onPreview = { selectedRoutine = it },
                             onStart = { startRoutine(it) }
                         )
+                    }
+                }
+
+                if (catalogEnabled) {
+                    item {
+                        OutlinedButton(
+                            onClick = { onNavigate(Destinations.EXERCISE_CATALOG) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("open_exercise_catalog")
+                        ) {
+                            Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Explorar catálogo de ejercicios")
+                        }
                     }
                 }
 
@@ -380,7 +416,7 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing)) {
                                 rowHistory.forEach { log ->
                                     Box(modifier = Modifier.weight(1f)) {
-                                        WorkoutHistoryCard(log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
+                                        WorkoutHistoryCard(log.id, log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
                                             viewModel.removeWorkoutLog(log)
                                         }
                                     }
@@ -392,7 +428,7 @@ fun WorkoutScreen(viewModel: GymViewModel, onNavigate: (String) -> Unit) {
                         }
                     } else {
                         items(historyItems) { log ->
-                            WorkoutHistoryCard(log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
+                            WorkoutHistoryCard(log.id, log.routineName, log.durationMinutes, log.caloriesBurned, log.exercisesText) {
                                 viewModel.removeWorkoutLog(log)
                             }
                         }
@@ -542,6 +578,7 @@ private fun ActiveWorkoutContent(
 @Composable
 private fun TrainingProgressShortcutCard(onProgress: () -> Unit) {
     Card(
+        onClick = onProgress,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
@@ -568,7 +605,7 @@ private fun TrainingProgressShortcutCard(onProgress: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            OutlinedButton(onClick = onProgress) {
+            OutlinedButton(onClick = onProgress, modifier = Modifier.testTag("open_progress_button")) {
                 Text("Ver")
             }
         }
@@ -641,11 +678,12 @@ private fun RoutineFilters(
             }
         }
         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Sin equipo", "Casa", "Gym").forEach { equipment ->
+            listOf("Sin equipo", "Casa", "Gym", "Ambos").forEach { equipment ->
                 FilterChip(
                     selected = selectedEquipment == equipment,
                     onClick = { onEquipment(equipment) },
-                    label = { Text(equipment) }
+                    label = { Text(equipment) },
+                    modifier = Modifier.testTag("workout_equipment_${equipment.replace(' ', '_')}")
                 )
             }
         }
@@ -663,7 +701,10 @@ private fun RoutineFilters(
 
 @Composable
 private fun RoutineCard(routine: SuggestedRoutine, onPreview: () -> Unit, onStart: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("routine_card_${routine.id}"),
+        shape = RoundedCornerShape(18.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -677,7 +718,10 @@ private fun RoutineCard(routine: SuggestedRoutine, onPreview: () -> Unit, onStar
             Text(routine.primaryMuscles.joinToString { Muscle.fromLegacyName(it)?.displayName ?: it }, style = MaterialTheme.typography.labelMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onPreview, modifier = Modifier.weight(1f)) { Text("Ver detalles") }
-                Button(onClick = onStart, modifier = Modifier.weight(1f)) { Text("Iniciar entrenamiento") }
+                Button(
+                    onClick = onStart,
+                    modifier = Modifier.weight(1f).testTag("start_routine_${routine.id}")
+                ) { Text("Iniciar entrenamiento") }
             }
         }
     }
@@ -755,8 +799,8 @@ private fun FreeWorkoutCard(onStart: () -> Unit) {
 }
 
 @Composable
-private fun WorkoutHistoryCard(title: String, duration: Int, calories: Int, summary: String, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun WorkoutHistoryCard(id: Int, title: String, duration: Int, calories: Int, summary: String, onDelete: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().testTag("workout_history_$id")) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

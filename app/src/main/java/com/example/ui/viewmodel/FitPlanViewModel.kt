@@ -3,11 +3,13 @@ package com.example.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
+import com.example.data.api.BackendApiClient
+import com.example.data.api.BackendAuthenticationException
 import com.example.data.api.FoodImageEstimate
 import com.example.data.analytics.ProductAnalytics
 import com.example.data.api.GeminiService
 import com.example.data.api.GeminiImageRequest
+import com.example.data.api.InMemoryBackendSession
 import com.example.data.local.AppDatabase
 import com.example.data.local.PreferencesManager
 import com.example.data.model.ActivitySessionEntity
@@ -22,6 +24,7 @@ import com.example.data.model.GpsRoutePoint
 import com.example.data.model.HealthLogEntity
 import com.example.data.model.UserEntity
 import com.example.data.model.UserDiscipline
+import com.example.data.model.withTrainingPlace
 import com.example.data.model.TodayWellnessSummary
 import com.example.data.model.WellnessEntryDraft
 import com.example.data.model.WellnessEntryRules
@@ -38,6 +41,7 @@ import com.example.data.model.PremiumAccessPolicy
 import com.example.data.model.VisualPerformanceProfile
 import com.example.data.repository.FitPlanRepository
 import com.example.data.repository.PerformanceSettingsRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,9 +53,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.roundToInt
+import com.example.data.model.isValidOwnerId
+import com.example.data.model.LEGACY_OWNER_ID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class FitPlanViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val prefs = PreferencesManager(application)
+    private val _activeOwnerId = MutableStateFlow(prefs.getActiveOwnerId())
     private val db = AppDatabase.getInstance(application)
     private val repository = FitPlanRepository(
         db.userDao(),
@@ -60,11 +70,14 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
         db.foodItemDao(),
         db.workoutDao(),
         db.activitySessionDao(),
-        db.healthDao()
+        db.healthDao(),
+        _activeOwnerId,
+        db.accountDataDao()
     )
-    private val prefs = PreferencesManager(application)
     private val performanceRepository = PerformanceSettingsRepository(application)
-    private val geminiService = GeminiService()
+    private val backendSession = InMemoryBackendSession()
+    private val backendApiClient = BackendApiClient.production(backendSession)
+    private val geminiService = GeminiService(backendApiClient)
     
     private val streakRepo = com.example.data.repository.StreakRepository(db.streakDao())
     private val activityRepo = com.example.data.repository.DailyActivityRepository(db.dailyActivityDao())
@@ -75,7 +88,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     private val missionManager = com.example.data.repository.DailyMissionManager(missionRepo, streakManager, achManager)
 
     // Preferences states
-    private val _isLoggedIn = MutableStateFlow(prefs.isLoggedIn())
+    private val _isLoggedIn = MutableStateFlow(prefs.isLoggedIn() && _activeOwnerId.value != null)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
     private val _isOnboardingCompleted = MutableStateFlow(prefs.isOnboardingCompleted())
@@ -83,8 +96,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
 
     private val _isPremiumActive = MutableStateFlow(
         PremiumAccessPolicy.isPremiumActive(
-            storedPremiumUnlocked = prefs.isPremiumUnlocked(),
-            isDebugBuild = BuildConfig.DEBUG
+            storedPremiumUnlocked = prefs.isPremiumUnlocked()
         )
     )
     val isPremiumActive: StateFlow<Boolean> = _isPremiumActive.asStateFlow()
@@ -190,7 +202,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             if (_isLoggedIn.value && repository.getUserDirectly() == null) {
                 repository.saveUser(UserEntity(
-                    uid = "local_user",
+                    uid = requireNotNull(_activeOwnerId.value),
                     name = "Usuario FitPlan",
                     email = prefs.getUserEmail() ?: "user@fitplan.mx",
                     disclaimerAccepted = true
@@ -200,35 +212,212 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Authentication Actions
-    fun loginUser(email: String, name: String) {
-        viewModelScope.launch {
-            prefs.setLoggedIn(true, email)
-            _isLoggedIn.value = true
-
-            // Setup local profile skeleton
+    suspend fun loginUser(email: String, name: String, pin: String): Result<Unit> {
+        backendSession.clear()
+        return try {
+            val migratedProfile = db.userDao().getUser(LEGACY_OWNER_ID)
+            prefs.authorizeLegacyRecoveryIfMatching(
+                requestedEmail = email,
+                migratedProfileEmail = migratedProfile?.email
+            )
+            val ownerId = withContext(Dispatchers.Default) {
+                prefs.startLocalAccountSession(email, pin)
+            }
+            activateLocalSession(ownerId)
             val existing = repository.getUserDirectly()
             if (existing == null) {
                 repository.saveUser(UserEntity(
-                    uid = "local_user",
+                    uid = ownerId,
                     name = name,
                     email = email
                 ))
             } else {
                 repository.saveUser(existing.copy(name = name, email = email))
             }
+            Result.success(Unit)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: IllegalArgumentException) {
+            Result.failure(error)
+        } catch (error: SecurityException) {
+            Result.failure(error)
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    suspend fun loginGoogleUser(idToken: String, email: String, name: String): Result<Unit> {
+        val identity = backendApiClient.exchangeGoogleIdToken(idToken).getOrElse {
+            return Result.failure(BackendAuthenticationException())
+        }
+        return try {
+            val ownerId = prefs.startGoogleLocalSession(identity.subject, email)
+            activateLocalSession(ownerId)
+            val existing = repository.getUserDirectly()
+            repository.saveUser(
+                existing?.copy(name = name, email = email)
+                    ?: UserEntity(uid = ownerId, name = name, email = email)
+            )
+            Result.success(Unit)
+        } catch (error: CancellationException) {
+            backendSession.clear()
+            throw error
+        } catch (_: Exception) {
+            backendSession.clear()
+            Result.failure(BackendAuthenticationException())
         }
     }
 
     fun logoutUser() {
-        prefs.setLoggedIn(false)
-        prefs.setOnboardingCompleted(false)
+        backendSession.clear()
+        _activeOwnerId.value = null
+        prefs.endSession()
+        cancelSessionWork()
         _isLoggedIn.value = false
         _isOnboardingCompleted.value = false
+        _isPremiumActive.value = false
+        _preventiveAlerts.value = null
+        _habitsAdvice.value = null
+        _fitCoreAdvice.value = null
+        _geminiFoodUiState.value = GeminiFoodUiState()
+    }
+
+    private fun activateLocalSession(ownerId: String) {
+        check(isValidOwnerId(ownerId))
+        _activeOwnerId.value = ownerId
+        _isLoggedIn.value = true
+        _isOnboardingCompleted.value = prefs.isOnboardingCompleted()
+        _isPremiumActive.value = PremiumAccessPolicy.isPremiumActive(prefs.isPremiumUnlocked())
+        _useMetric.value = prefs.useMetricSettings()
+        _defaultGlassMl.value = prefs.getDefaultGlassMl()
+        _hybridPlanSettings.value = prefs.getHybridPlanSettings()
+        _themeSelector.value = prefs.getThemeSelector()
+    }
+
+    private fun cancelSessionWork() {
+        alertsJob?.cancel()
+        habitsJob?.cancel()
+        fitCoreJob?.cancel()
+        geminiFoodJob?.cancel()
+        alertsJob = null
+        habitsJob = null
+        fitCoreJob = null
+        geminiFoodJob = null
     }
 
     fun restartOnboarding() {
         prefs.setOnboardingCompleted(false)
         _isOnboardingCompleted.value = false
+    }
+
+    fun updateProfileFromSettings(
+        name: String,
+        age: Int,
+        weightKg: Float,
+        heightCm: Float,
+        gender: String,
+        trainingPlace: String,
+        onComplete: (Result<Unit>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result: Result<Unit> = try {
+                val current = repository.getUserDirectly()
+                    ?: error("No hay un perfil local para actualizar")
+                val metabolicDataChanged = current.age != age ||
+                    current.weightKg != weightKg ||
+                    current.heightCm != heightCm ||
+                    current.gender != gender
+                val targets = if (metabolicDataChanged) {
+                    calculateProfileTargets(
+                        age = age,
+                        weightKg = weightKg,
+                        heightCm = heightCm,
+                        gender = gender,
+                        activityLevel = current.activityLevel,
+                        goal = current.goal
+                    )
+                } else {
+                    ProfileTargets(
+                        calories = current.targetCalories,
+                        proteinG = current.targetProteinG,
+                        carbsG = current.targetCarbsG,
+                        fatG = current.targetFatG
+                    )
+                }
+
+                repository.saveUser(
+                    current.copy(
+                        name = name,
+                        age = age,
+                        weightKg = weightKg,
+                        heightCm = heightCm,
+                        gender = gender,
+                        goal = current.goal.withTrainingPlace(trainingPlace),
+                        targetCalories = targets.calories,
+                        targetProteinG = targets.proteinG,
+                        targetCarbsG = targets.carbsG,
+                        targetFatG = targets.fatG
+                    )
+                )
+                Result.success(Unit)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                Result.failure(error)
+            }
+            onComplete(result)
+        }
+    }
+
+    private data class ProfileTargets(
+        val calories: Int,
+        val proteinG: Int,
+        val carbsG: Int,
+        val fatG: Int
+    )
+
+    private fun calculateProfileTargets(
+        age: Int,
+        weightKg: Float,
+        heightCm: Float,
+        gender: String,
+        activityLevel: String,
+        goal: String
+    ): ProfileTargets {
+        val bmr = if (gender == "Masculino") {
+            88.362f + (13.397f * weightKg) + (4.799f * heightCm) - (5.677f * age)
+        } else {
+            447.593f + (9.247f * weightKg) + (3.098f * heightCm) - (4.330f * age)
+        }
+        val multiplier = when (activityLevel) {
+            "Sedentario" -> 1.2f
+            "Ligero" -> 1.375f
+            "Moderado" -> 1.55f
+            "Activo" -> 1.725f
+            else -> 1.2f
+        }
+        val normalizedGoal = goal.lowercase()
+        val maintenanceCalories = bmr * multiplier
+        val calories = when {
+            normalizedGoal.contains("perder") || normalizedGoal.contains("bajar") || normalizedGoal.contains("grasa") ->
+                (maintenanceCalories - 500f).coerceAtLeast(1200f).toInt()
+            normalizedGoal.contains("ganar") -> (maintenanceCalories + 400f).toInt()
+            else -> maintenanceCalories.toInt()
+        }
+        val proteinG = when {
+            normalizedGoal.contains("perder") || normalizedGoal.contains("bajar") || normalizedGoal.contains("grasa") ->
+                (weightKg * 2.2f).toInt().coerceIn(60, 250)
+            normalizedGoal.contains("ganar") -> (weightKg * 2.0f).toInt().coerceIn(60, 250)
+            else -> (weightKg * 1.6f).toInt().coerceIn(50, 200)
+        }
+        val fatG = when {
+            normalizedGoal.contains("perder") || normalizedGoal.contains("bajar") || normalizedGoal.contains("grasa") ->
+                (weightKg * 0.8f).toInt().coerceIn(30, 100)
+            normalizedGoal.contains("ganar") -> (weightKg * 1.0f).toInt().coerceIn(35, 120)
+            else -> (weightKg * 0.9f).toInt().coerceIn(30, 110)
+        }
+        val carbsG = ((calories - proteinG * 4 - fatG * 9) / 4).coerceAtLeast(50)
+        return ProfileTargets(calories, proteinG, carbsG, fatG)
     }
 
     // Onboarding setup with Harris-Benedict metabolic equation
@@ -301,10 +490,9 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                 targetCarbsG = targetCarbs,
                 targetFatG = targetFat,
                 disclaimerAccepted = disclaimerAccepted,
-                isPremium = PremiumAccessPolicy.isPremiumActive(
-                    storedPremiumUnlocked = prefs.isPremiumUnlocked(),
-                    isDebugBuild = BuildConfig.DEBUG
-                ),
+                // Room mirrors only the real Billing entitlement. QA access is
+                // build-scoped and must never be persisted as a subscription.
+                isPremium = prefs.isPremiumUnlocked(),
                 trainingDiscipline = UserDiscipline.fromStoredName(trainingDiscipline).name
             )
 
@@ -501,7 +689,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
             } else {
                 repository.saveUser(
                     UserEntity(
-                        uid = "local_user",
+                        uid = requireNotNull(_activeOwnerId.value),
                         name = "Usuario FitPlan",
                         email = prefs.getUserEmail() ?: "user@fitplan.mx",
                         trainingDiscipline = discipline.name
@@ -515,7 +703,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     fun updatePrimaryGoal(goal: String) {
         viewModelScope.launch {
             val current = repository.getUserDirectly() ?: UserEntity(
-                uid = "local_user",
+                uid = requireNotNull(_activeOwnerId.value),
                 name = "Usuario FitPlan",
                 email = prefs.getUserEmail() ?: "user@fitplan.mx"
             )
@@ -916,10 +1104,11 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     fun triggerGamificationHook(actionKey: String) {
         viewModelScope.launch {
             try {
+                val ownerId = _activeOwnerId.value ?: return@launch
                 val todayStr = com.example.data.repository.LocalDateUtils.getTodayString()
                 val activityDao = db.dailyActivityDao()
-                val current = activityDao.getActivityForDay("local_user", todayStr) ?: com.example.data.model.DailyActivityEntity(
-                    userId = "local_user",
+                val current = activityDao.getActivityForDay(ownerId, todayStr) ?: com.example.data.model.DailyActivityEntity(
+                    userId = ownerId,
                     date = todayStr,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
@@ -936,51 +1125,50 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                 }
                 activityDao.insertActivity(updated)
 
-                val (newStreak, wasReset) = streakManager.updateStreak("local_user")
+                val (newStreak, wasReset) = streakManager.updateStreak(ownerId)
 
-                missionManager.triggerMissionCheck("local_user", actionKey)
+                missionManager.triggerMissionCheck(ownerId, actionKey)
 
                 // Use withTimeoutOrNull to avoid hanging forever on slow DB flows
                 val userLogsCount = kotlinx.coroutines.withTimeoutOrNull(5_000L) {
-                    activityRepo.getAllActivitiesFlow("local_user").first()
+                    activityRepo.getAllActivitiesFlow(ownerId).first()
                 } ?: emptyList()
 
                 if (actionKey == "log_food") {
-                    achManager.checkAndAward("local_user", "ach_first_food")
+                    achManager.checkAndAward(ownerId, "ach_first_food")
                 }
                 if (actionKey == "log_workout") {
-                    achManager.checkAndAward("local_user", "ach_first_workout")
+                    achManager.checkAndAward(ownerId, "ach_first_workout")
                 }
 
                 if (newStreak >= 3) {
-                    achManager.checkAndAward("local_user", "ach_streak_3")
+                    achManager.checkAndAward(ownerId, "ach_streak_3")
                 }
                 if (newStreak >= 7) {
-                    achManager.checkAndAward("local_user", "ach_streak_7")
+                    achManager.checkAndAward(ownerId, "ach_streak_7")
                 }
                 if (newStreak >= 14) {
-                    achManager.checkAndAward("local_user", "ach_streak_14")
+                    achManager.checkAndAward(ownerId, "ach_streak_14")
                 }
                 if (newStreak >= 30) {
-                    achManager.checkAndAward("local_user", "ach_streak_30")
+                    achManager.checkAndAward(ownerId, "ach_streak_30")
                 }
                 if (wasReset) {
-                    achManager.checkAndAward("local_user", "ach_epic_return")
+                    achManager.checkAndAward(ownerId, "ach_epic_return")
                 }
 
                 val streakHydration = userLogsCount.take(3).all { it.hasWaterLog }
                 if (streakHydration && userLogsCount.size >= 3) {
-                    achManager.checkAndAward("local_user", "ach_hydration")
+                    achManager.checkAndAward(ownerId, "ach_hydration")
                 }
 
                 val activeWeekDays = userLogsCount.take(7).count { it.isActiveDay }
                 if (activeWeekDays == 7) {
-                    achManager.checkAndAward("local_user", "ach_active_week")
+                    achManager.checkAndAward(ownerId, "ach_active_week")
                 }
             } catch (e: Exception) {
                 // Re-throw CancellationException to respect structured concurrency
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.w("FitPlanVM", "Gamification hook error for $actionKey: ${e.message}")
             }
         }
     }
@@ -994,6 +1182,7 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
     ) {
         viewModelScope.launch {
             try {
+                val ownerId = _activeOwnerId.value ?: return@launch
                 val actionKeys = buildList {
                     if (waterSelected) add("log_water")
                     if (foodSelected) add("log_food")
@@ -1004,8 +1193,8 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
 
                 val todayStr = com.example.data.repository.LocalDateUtils.getTodayString()
                 val activityDao = db.dailyActivityDao()
-                val current = activityDao.getActivityForDay("local_user", todayStr) ?: com.example.data.model.DailyActivityEntity(
-                    userId = "local_user",
+                val current = activityDao.getActivityForDay(ownerId, todayStr) ?: com.example.data.model.DailyActivityEntity(
+                    userId = ownerId,
                     date = todayStr,
                     createdAt = System.currentTimeMillis(),
                     updatedAt = System.currentTimeMillis()
@@ -1024,36 +1213,15 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
                     )
                 )
 
-                streakManager.updateStreak("local_user")
+                streakManager.updateStreak(ownerId)
                 actionKeys.forEach { key ->
-                    missionManager.triggerMissionCheck("local_user", key)
-                    if (key == "log_food") achManager.checkAndAward("local_user", "ach_first_food")
-                    if (key == "log_workout") achManager.checkAndAward("local_user", "ach_first_workout")
+                    missionManager.triggerMissionCheck(ownerId, key)
+                    if (key == "log_food") achManager.checkAndAward(ownerId, "ach_first_food")
+                    if (key == "log_workout") achManager.checkAndAward(ownerId, "ach_first_workout")
                 }
             } catch (e: Exception) {
                 // Re-throw CancellationException to respect structured concurrency
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                android.util.Log.w("FitPlanVM", "Daily check-in hook error: ${e.message}")
-            }
-        }
-    }
-
-    // Local premium toggle is available only in debug builds.
-    fun patchPremiumAccess(enabled: Boolean) {
-        viewModelScope.launch {
-            val storedPremium = PremiumAccessPolicy.storedPremiumFromLocalPatch(
-                enabled = enabled,
-                isDebugBuild = BuildConfig.DEBUG
-            )
-            prefs.setPremiumUnlocked(storedPremium)
-            val effectivePremium = PremiumAccessPolicy.isPremiumActive(
-                storedPremiumUnlocked = storedPremium,
-                isDebugBuild = BuildConfig.DEBUG
-            )
-            _isPremiumActive.value = effectivePremium
-            val current = repository.getUserDirectly()
-            if (current != null) {
-                repository.saveUser(current.copy(isPremium = effectivePremium))
             }
         }
     }
@@ -1062,12 +1230,11 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             prefs.setPremiumUnlocked(enabled)
             val effectivePremium = PremiumAccessPolicy.isPremiumActive(
-                storedPremiumUnlocked = enabled,
-                isDebugBuild = BuildConfig.DEBUG
+                storedPremiumUnlocked = enabled
             )
             _isPremiumActive.value = effectivePremium
             repository.getUserDirectly()?.let { current ->
-                repository.saveUser(current.copy(isPremium = effectivePremium))
+                repository.saveUser(current.copy(isPremium = enabled))
             }
         }
     }
@@ -1140,16 +1307,19 @@ class FitPlanViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.wipeUserData()
             prefs.clearAllPreferences()
+            _activeOwnerId.value = null
+            cancelSessionWork()
             performanceRepository.resetToAutomatic()
             refreshPerformanceState()
             _isLoggedIn.value = false
             _isOnboardingCompleted.value = false
             _isPremiumActive.value = PremiumAccessPolicy.isPremiumActive(
-                storedPremiumUnlocked = false,
-                isDebugBuild = BuildConfig.DEBUG
+                storedPremiumUnlocked = false
             )
             _preventiveAlerts.value = null
             _habitsAdvice.value = null
+            _fitCoreAdvice.value = null
+            _geminiFoodUiState.value = GeminiFoodUiState()
         }
     }
 

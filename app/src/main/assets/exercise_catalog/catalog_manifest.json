@@ -1,0 +1,7 @@
+{
+  "source": "exercises_dataset",
+  "importVersion": "exercise-catalog-2026-07-15-v1",
+  "compactSha256": "9a075a3bec6d196e8de3485f3e1152a94f3b05b7792ea68eab893f5e1d60297d",
+  "recordCount": 1324,
+  "normalizationRulesVersion": "fitplan-exercise-import-v2"
+}

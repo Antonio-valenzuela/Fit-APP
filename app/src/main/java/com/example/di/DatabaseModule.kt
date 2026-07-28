@@ -2,6 +2,7 @@ package com.example.di
 
 import android.content.Context
 import com.example.data.local.AppDatabase
+import com.example.data.local.ExerciseCatalogDao
 import com.example.data.local.PreferencesManager
 import com.example.data.local.UserDao
 import com.example.data.local.WorkoutDao
@@ -31,6 +32,11 @@ object DatabaseModule {
     @Provides
     fun provideWorkoutDao(database: AppDatabase): WorkoutDao {
         return database.workoutDao()
+    }
+
+    @Provides
+    fun provideExerciseCatalogDao(database: AppDatabase): ExerciseCatalogDao {
+        return database.exerciseCatalogDao()
     }
 
     @Provides

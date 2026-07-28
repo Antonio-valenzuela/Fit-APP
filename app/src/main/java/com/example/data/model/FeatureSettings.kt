@@ -16,5 +16,11 @@ data class FeatureSettings(
     val dailyMissionsEnabled: Boolean = true,
     val achievementsEnabled: Boolean = true,
     val motivationMessagesEnabled: Boolean = true,
-    val softMotivationMode: Boolean = true
+    val softMotivationMode: Boolean = true,
+    val exerciseCatalogEnabled: Boolean = false
 )
+
+object ExerciseCatalogFeaturePolicy {
+    fun resolve(buildEnabled: Boolean, storedOverride: Boolean?): Boolean =
+        buildEnabled && (storedOverride ?: true)
+}

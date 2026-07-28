@@ -17,7 +17,9 @@ enum class Muscle(val displayName: String, val legacyName: String) {
     FULL_BODY("Cuerpo completo", "full_body"),
     CARDIO("Cardio", "cardio"),
     FOREARMS("Antebrazos", "antebrazos"),
-    TRAPS("Trapecio", "trapecio");
+    TRAPS("Trapecio", "trapecio"),
+    ADDUCTORS("Aductores", "aductores"),
+    ABDUCTORS("Abductores", "abductores");
 
     companion object {
         fun fromLegacyName(name: String?): Muscle? {
@@ -43,7 +45,8 @@ enum class Muscle(val displayName: String, val legacyName: String) {
                 "cardio" -> CARDIO
                 "antebrazos", "antebrazo", "forearms" -> FOREARMS
                 "trapecio", "traps" -> TRAPS
-                "aductores", "abductores" -> QUADS // Fallback or could add if needed
+                "aductores", "aductor" -> ADDUCTORS
+                "abductores", "abductor" -> ABDUCTORS
                 else -> null
             }
         }

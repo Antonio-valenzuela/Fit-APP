@@ -6,7 +6,15 @@ const assert = require('node:assert/strict')
 const geminiRouter = require('../routes/gemini')
 const { ProviderRequestError } = require('../services/geminiProvider')
 
-const { createVisionHandler, createTextBenchmarkHandler, requireBenchmarkAccess, validateVisionPayload } = geminiRouter.testing
+const {
+  createVisionHandler,
+  createTextBenchmarkHandler,
+  createChatHandler,
+  buildChatProviderBody,
+  requireBenchmarkAccess,
+  validateVisionPayload,
+  validateChatPayload
+} = geminiRouter.testing
 
 const nutrition = Object.freeze({
   foodName: 'Ensalada',
@@ -46,6 +54,94 @@ function responseRecorder() {
     json(value) { this.body = value; return this }
   }
 }
+
+function chatPayload(text = 'Consejo preventivo seguro') {
+  return { contents: [{ parts: [{ text }] }] }
+}
+
+test('accepts only the exact Android chat wire shape with one bounded text part', () => {
+  assert.equal(validateChatPayload(chatPayload('  Consejo seguro  ')), 'Consejo seguro')
+
+  const invalidPayloads = [
+    { ...chatPayload(), generationConfig: { temperature: 2 } },
+    { contents: [{ parts: [{ text: 'ok' }], role: 'system' }] },
+    { contents: [{ parts: [{ text: 'ok', inlineData: 'blocked' }] }] },
+    { contents: [{ parts: [{ text: 'one' }, { text: 'two' }] }] },
+    { contents: [{ parts: [{ text: 'x'.repeat(12_001) }] }] },
+    { contents: [{ parts: [{ text: '   ' }] }] }
+  ]
+  for (const body of invalidPayloads) {
+    assert.throws(() => validateChatPayload(body), error => error.status === 400)
+  }
+})
+
+test('constructs Gemini chat configuration server-side and returns only the minimal Android response', async () => {
+  const calls = []
+  const fetchFn = async (url, options) => {
+    calls.push({ url, options })
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        candidates: [{
+          content: { parts: [
+            { thought: true, text: 'private reasoning' },
+            { text: 'Consejo validado', thoughtSignature: 'opaque' }
+          ] },
+          finishReason: 'STOP'
+        }],
+        usageMetadata: { promptTokenCount: 12 }
+      })
+    }
+  }
+  const handler = createChatHandler({ fetchFn })
+  const req = {
+    id: 'request-chat-1234',
+    body: chatPayload('  Consejo preventivo seguro  '),
+    app: { locals: {
+      securityConfig: { geminiApiKey: 'provider-key', geminiModel: 'gemini-3.5-flash', geminiAttemptTimeoutMs: 1000 },
+      securityLogger: { warn() {} }
+    } }
+  }
+  const res = responseRecorder()
+
+  await handler(req, res)
+
+  assert.equal(res.statusCode, 200)
+  assert.deepEqual(res.body, { candidates: [{ content: { parts: [{ text: 'Consejo validado' }] } }] })
+  const upstream = JSON.parse(calls[0].options.body)
+  assert.deepEqual(upstream, buildChatProviderBody('Consejo preventivo seguro'))
+  assert.deepEqual(upstream.contents, [{ role: 'user', parts: [{ text: 'Consejo preventivo seguro' }] }])
+  assert.equal(Object.hasOwn(upstream, 'generationConfig'), true)
+  assert.equal(JSON.stringify(res.body).includes('private reasoning'), false)
+  assert.equal(JSON.stringify(res.body).includes('thoughtSignature'), false)
+  assert.equal(JSON.stringify(res.body).includes('usageMetadata'), false)
+})
+
+test('sanitizes unsuccessful and malformed Gemini chat responses', async () => {
+  const providerBodies = [
+    { ok: false, status: 400, text: async () => '{"error":{"message":"raw provider secret"}}' },
+    { ok: true, status: 200, text: async () => '{not-json' },
+    { ok: true, status: 200, text: async () => JSON.stringify({ candidates: [] }) }
+  ]
+
+  for (const providerResponse of providerBodies) {
+    const handler = createChatHandler({ fetchFn: async () => providerResponse })
+    const res = responseRecorder()
+    await handler({
+      id: 'request-chat-error',
+      body: chatPayload(),
+      app: { locals: {
+        securityConfig: { geminiApiKey: 'provider-key', geminiModel: 'gemini-3.5-flash', geminiAttemptTimeoutMs: 1000 },
+        securityLogger: { warn() {} }
+      } }
+    }, res)
+
+    assert.equal(res.statusCode, 502)
+    assert.equal(JSON.stringify(res.body).includes('raw provider secret'), false)
+    assert.equal(JSON.stringify(res.body).includes('{not-json'), false)
+  }
+})
 
 test('validates and decodes the app-specific vision payload', () => {
   const validated = validateVisionPayload(payload())
@@ -215,14 +311,14 @@ test('text benchmark handler rejects blank descriptions before provider executio
   assert.equal(calls, 0)
 })
 
-test('benchmark endpoints reject normal JWT users and allow the static backend credential', () => {
+test('benchmark endpoints reject normal users and allow an authenticated benchmark role', () => {
   let nextCalls = 0
   const denied = responseRecorder()
-  requireBenchmarkAccess({ user: { id: 'normal-user' } }, denied, () => { nextCalls += 1 })
+  requireBenchmarkAccess({ auth: { subject: 'normal-user', roles: ['member'] } }, denied, () => { nextCalls += 1 })
   assert.equal(denied.statusCode, 403)
-  assert.equal(denied.body.code, 'BENCHMARK_ACCESS_DENIED')
+  assert.deepEqual(denied.body, { error: 'Forbidden' })
 
-  requireBenchmarkAccess({ user: { id: 'default_admin_user' } }, responseRecorder(), () => { nextCalls += 1 })
+  requireBenchmarkAccess({ auth: { subject: 'operator-user', roles: ['benchmark'] } }, responseRecorder(), () => { nextCalls += 1 })
   assert.equal(nextCalls, 1)
 })
 

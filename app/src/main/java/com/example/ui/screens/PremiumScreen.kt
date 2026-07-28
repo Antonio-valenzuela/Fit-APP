@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.billing.PremiumBillingManager
 import com.example.data.billing.PremiumOffer
 import com.example.data.analytics.ProductAnalytics
+import com.example.data.model.PremiumAccessPolicy
 import com.example.ui.theme.GoldenAmber
 import com.example.ui.theme.frostedMeshBackground
 import com.example.ui.theme.glassCard
@@ -32,6 +34,7 @@ import com.example.ui.viewmodel.FitPlanViewModel
 @Composable
 fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
+    val isPremiumTestMode = PremiumAccessPolicy.isTestMode
     var offer by remember { mutableStateOf<PremiumOffer?>(null) }
     var billingReady by remember { mutableStateOf(false) }
 
@@ -45,11 +48,13 @@ fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
         )
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isPremiumTestMode) {
         ProductAnalytics.track("paywall_seen", mapOf("surface" to "premium_screen"))
-        billingManager.start { loadedOffer ->
-            offer = loadedOffer
-            billingReady = loadedOffer != null
+        if (!isPremiumTestMode) {
+            billingManager.start { loadedOffer ->
+                offer = loadedOffer
+                billingReady = loadedOffer != null
+            }
         }
     }
 
@@ -60,6 +65,7 @@ fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("premium_screen")
             .frostedMeshBackground(isDark)
             .padding(16.dp)
     ) {
@@ -89,6 +95,22 @@ fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
+
+            if (isPremiumTestMode) {
+                Surface(
+                    modifier = Modifier.testTag("premium_test_mode_indicator"),
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Text(
+                        "Premium de prueba (QA)",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
 
             Text(
                 "Reportes avanzados, resumen semanal y ajustes automaticos para que tu plan se adapte a tus registros.",
@@ -130,7 +152,9 @@ fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                if (billingReady) {
+                if (isPremiumTestMode) {
+                    "Modo QA local: no inicia Google Play Billing ni crea compras o suscripciones."
+                } else if (billingReady) {
                     "Pago seguro gestionado por Google Play. Puedes cancelar desde tus suscripciones de Play."
                 } else {
                     "Crea la suscripcion fitplan_premium_monthly en Play Console para activar cobros reales."
@@ -176,7 +200,11 @@ fun PremiumScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            "Tu plan Premium esta activo en este dispositivo.",
+                            if (isPremiumTestMode) {
+                                "Premium de prueba activo. No representa una compra ni crea una suscripcion."
+                            } else {
+                                "Tu plan Premium esta activo en este dispositivo."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             fontWeight = FontWeight.Bold

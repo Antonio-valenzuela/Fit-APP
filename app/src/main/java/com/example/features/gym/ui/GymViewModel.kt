@@ -2,7 +2,6 @@ package com.example.features.gym.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
 import com.example.data.local.PreferencesManager
 import com.example.data.local.AppDatabase
 import com.example.data.model.PremiumAccessPolicy
@@ -30,6 +29,7 @@ import com.example.data.repository.DailyMissionManager
 import com.example.data.model.WellnessEntryType
 import com.example.data.model.WellnessEntryRules
 import com.example.data.model.HealthLogEntity
+import com.example.data.model.isValidOwnerId
 import kotlinx.coroutines.flow.first
 
 data class GymUiState(
@@ -66,8 +66,7 @@ class GymViewModel @Inject constructor(
                     isLoading = false,
                     error = null,
                     isPremiumActive = PremiumAccessPolicy.isPremiumActive(
-                        storedPremiumUnlocked = prefs.isPremiumUnlocked(),
-                        isDebugBuild = BuildConfig.DEBUG
+                        storedPremiumUnlocked = prefs.isPremiumUnlocked()
                     )
                 )
             }
@@ -114,9 +113,11 @@ class GymViewModel @Inject constructor(
     }
 
     private suspend fun markWorkoutCompletedFromTrainingSession() {
+        val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId) ?: return
         val today = LocalDateUtils.getTodayString()
         val healthDao = db.healthDao()
         val existing = healthDao.getHealthLogForDateTypeContext(
+            ownerId = ownerId,
             dateKey = today,
             type = WellnessEntryType.HABIT.key,
             context = WellnessEntryRules.AUTO_WORKOUT_CONTEXT
@@ -140,15 +141,16 @@ class GymViewModel @Inject constructor(
             updatedAt = now,
             isAutoWorkout = true
         )
-        healthDao.insertHealthLog(autoLog)
+        healthDao.insertHealthLog(autoLog.copy(ownerId = ownerId))
     }
 
     private suspend fun triggerGamificationHook(actionKey: String) {
         try {
+            val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId) ?: return
             val todayStr = LocalDateUtils.getTodayString()
             val activityDao = db.dailyActivityDao()
-            val current = activityDao.getActivityForDay("local_user", todayStr) ?: DailyActivityEntity(
-                userId = "local_user",
+            val current = activityDao.getActivityForDay(ownerId, todayStr) ?: DailyActivityEntity(
+                userId = ownerId,
                 date = todayStr,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
@@ -163,38 +165,38 @@ class GymViewModel @Inject constructor(
             val streakRepo = StreakRepository(db.streakDao())
             val activityRepo = DailyActivityRepository(db.dailyActivityDao())
             val streakManager = StreakManager(streakRepo, activityRepo)
-            val (newStreak, wasReset) = streakManager.updateStreak("local_user")
+            val (newStreak, wasReset) = streakManager.updateStreak(ownerId)
 
             val missionRepo = DailyMissionRepository(db.dailyMissionDao())
             val achRepo = AchievementRepository(db.achievementDao())
             val achManager = AchievementManager(achRepo)
             val missionManager = DailyMissionManager(missionRepo, streakManager, achManager)
-            missionManager.triggerMissionCheck("local_user", actionKey)
+            missionManager.triggerMissionCheck(ownerId, actionKey)
 
             if (actionKey == "log_workout") {
-                achManager.checkAndAward("local_user", "ach_first_workout")
+                achManager.checkAndAward(ownerId, "ach_first_workout")
             }
 
             if (newStreak >= 3) {
-                achManager.checkAndAward("local_user", "ach_streak_3")
+                achManager.checkAndAward(ownerId, "ach_streak_3")
             }
             if (newStreak >= 7) {
-                achManager.checkAndAward("local_user", "ach_streak_7")
+                achManager.checkAndAward(ownerId, "ach_streak_7")
             }
             if (newStreak >= 14) {
-                achManager.checkAndAward("local_user", "ach_streak_14")
+                achManager.checkAndAward(ownerId, "ach_streak_14")
             }
             if (newStreak >= 30) {
-                achManager.checkAndAward("local_user", "ach_streak_30")
+                achManager.checkAndAward(ownerId, "ach_streak_30")
             }
             if (wasReset) {
-                achManager.checkAndAward("local_user", "ach_epic_return")
+                achManager.checkAndAward(ownerId, "ach_epic_return")
             }
 
-            val userLogsCount = activityRepo.getAllActivitiesFlow("local_user").first()
+            val userLogsCount = activityRepo.getAllActivitiesFlow(ownerId).first()
             val activeWeekDays = userLogsCount.take(7).count { it.isActiveDay }
             if (activeWeekDays == 7) {
-                achManager.checkAndAward("local_user", "ach_active_week")
+                achManager.checkAndAward(ownerId, "ach_active_week")
             }
         } catch (e: Exception) {
             // Keep it completely silent

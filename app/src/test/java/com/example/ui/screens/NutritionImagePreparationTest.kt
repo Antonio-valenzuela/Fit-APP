@@ -6,10 +6,12 @@ import android.graphics.Color
 import android.media.ExifInterface
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,6 +21,22 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class NutritionImagePreparationTest {
+
+    @Test
+    fun `valid stream is not rejected when bounds decoder returns null`() {
+        var streamWasRead = false
+
+        val decodeResult = useRequiredInputStream(
+            openStream = { ByteArrayInputStream(byteArrayOf(1, 2, 3)) },
+            missingMessage = "No se pudo leer la foto tomada."
+        ) { input ->
+            streamWasRead = input.read() == 1
+            null
+        }
+
+        assertTrue(streamWasRead)
+        assertNull(decodeResult)
+    }
 
     @Test
     fun `prepare food image resizes large camera photo before Gemini`() {

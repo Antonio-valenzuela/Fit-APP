@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -70,11 +71,11 @@ fun PerformanceSettingsScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = if (profile.gradientsEnabled) {
+        modifier = (if (profile.gradientsEnabled) {
             Modifier.frostedMeshBackground(isDark)
         } else {
             Modifier.background(MaterialTheme.colorScheme.background)
-        },
+        }).testTag("performance_settings_screen"),
         topBar = {
             TopAppBar(
                 title = { Text("Modo rápido", fontWeight = FontWeight.Bold) },

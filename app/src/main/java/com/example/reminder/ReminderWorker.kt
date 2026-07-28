@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.example.data.local.AppDatabase
 import com.example.data.local.PreferencesManager
 import com.example.data.repository.LocalDateUtils
+import com.example.data.model.isValidOwnerId
 
 class ReminderWorker(
     appContext: Context,
@@ -16,6 +17,8 @@ class ReminderWorker(
     override suspend fun doWork(): Result {
         return try {
             val prefs = PreferencesManager(applicationContext)
+            val ownerId = prefs.getActiveOwnerId()?.takeIf(::isValidOwnerId)
+                ?: return Result.success()
             val settings = prefs.getFeatureSettings()
 
             // If notification reminders are not enabled globally, skip execution immediately to save battery
@@ -27,11 +30,11 @@ class ReminderWorker(
             val todayStr = LocalDateUtils.getTodayString()
 
             // Load activity status of current day
-            val dailyActivity = db.dailyActivityDao().getActivityForDay("local_user", todayStr)
+            val dailyActivity = db.dailyActivityDao().getActivityForDay(ownerId, todayStr)
             val hasCheckIn = dailyActivity?.hasCheckIn == true
 
             // Check missions status of current day
-            val missions = db.dailyMissionDao().getMissionsForDay("local_user", todayStr)
+            val missions = db.dailyMissionDao().getMissionsForDay(ownerId, todayStr)
             val pendingMissions = missions.filter { !it.completed }
 
             // Anti-intrusion policy: If user did check-in and finished missions, do NOT trigger any push

@@ -4,8 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
-import androidx.room.Delete
+import androidx.room.Transaction
 import com.example.data.model.FoodLogEntity
 import com.example.data.model.FoodEntryEntity
 import com.example.data.model.FoodItemEntity
@@ -22,136 +21,143 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface UserDao {
     @Query("SELECT * FROM users WHERE uid = :uid LIMIT 1")
-    fun getUserFlow(uid: String = "local_user"): Flow<UserEntity?>
+    fun getUserFlow(uid: String): Flow<UserEntity?>
 
     @Query("SELECT * FROM users WHERE uid = :uid LIMIT 1")
-    suspend fun getUser(uid: String = "local_user"): UserEntity?
+    suspend fun getUser(uid: String): UserEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertUser(user: UserEntity)
 
     @Query("DELETE FROM users WHERE uid = :uid")
-    suspend fun deleteUser(uid: String = "local_user")
+    suspend fun deleteUser(uid: String)
 }
 
 @Dao
 interface FoodDao {
-    @Query("SELECT * FROM food_logs ORDER BY timestamp DESC")
-    fun getFoodLogsFlow(): Flow<List<FoodLogEntity>>
+    @Query("SELECT * FROM food_logs WHERE ownerId = :ownerId ORDER BY timestamp DESC")
+    fun getFoodLogsFlow(ownerId: String): Flow<List<FoodLogEntity>>
 
-    @Query("SELECT * FROM food_logs WHERE timestamp >= :startDay AND timestamp <= :endDay ORDER BY timestamp DESC")
-    fun getFoodLogsForDayFlow(startDay: Long, endDay: Long): Flow<List<FoodLogEntity>>
+    @Query("SELECT * FROM food_logs WHERE ownerId = :ownerId AND timestamp >= :startDay AND timestamp <= :endDay ORDER BY timestamp DESC")
+    fun getFoodLogsForDayFlow(ownerId: String, startDay: Long, endDay: Long): Flow<List<FoodLogEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFoodLog(log: FoodLogEntity)
 
-    @Delete
-    suspend fun deleteFoodLog(log: FoodLogEntity)
+    @Query("DELETE FROM food_logs WHERE ownerId = :ownerId AND id = :id")
+    suspend fun deleteFoodLog(ownerId: String, id: Int)
 
-    @Query("DELETE FROM food_logs")
-    suspend fun clearAll()
+    @Query("DELETE FROM food_logs WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
 interface FoodEntryDao {
-    @Query("SELECT * FROM food_entries ORDER BY createdAt DESC")
-    fun getFoodEntriesFlow(): Flow<List<FoodEntryEntity>>
+    @Query("SELECT * FROM food_entries WHERE ownerId = :ownerId ORDER BY createdAt DESC")
+    fun getFoodEntriesFlow(ownerId: String): Flow<List<FoodEntryEntity>>
 
-    @Query("SELECT * FROM food_entries WHERE dateKey = :dateKey ORDER BY createdAt DESC")
-    fun getFoodEntriesForDateFlow(dateKey: String): Flow<List<FoodEntryEntity>>
+    @Query("SELECT * FROM food_entries WHERE ownerId = :ownerId AND dateKey = :dateKey ORDER BY createdAt DESC")
+    fun getFoodEntriesForDateFlow(ownerId: String, dateKey: String): Flow<List<FoodEntryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFoodEntry(entry: FoodEntryEntity): Long
 
-    @Delete
-    suspend fun deleteFoodEntry(entry: FoodEntryEntity)
+    @Query("DELETE FROM food_entries WHERE ownerId = :ownerId AND id = :id")
+    suspend fun deleteFoodEntry(ownerId: String, id: Long)
 
-    @Query("DELETE FROM food_entries")
-    suspend fun clearAll()
+    @Query("DELETE FROM food_entries WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
 interface FoodItemDao {
-    @Query("SELECT * FROM food_items ORDER BY createdAt DESC")
-    fun getFoodItemsFlow(): Flow<List<FoodItemEntity>>
+    @Query("SELECT * FROM food_items WHERE ownerId = :ownerId ORDER BY createdAt DESC")
+    fun getFoodItemsFlow(ownerId: String): Flow<List<FoodItemEntity>>
 
-    @Query("SELECT * FROM food_items WHERE isFavorite = 1 ORDER BY name ASC")
-    fun getFavoriteFoodItemsFlow(): Flow<List<FoodItemEntity>>
+    @Query("SELECT * FROM food_items WHERE ownerId = :ownerId AND isFavorite = 1 ORDER BY name ASC")
+    fun getFavoriteFoodItemsFlow(ownerId: String): Flow<List<FoodItemEntity>>
 
-    @Query("SELECT * FROM food_items WHERE barcode = :barcode LIMIT 1")
-    suspend fun getByBarcode(barcode: String): FoodItemEntity?
+    @Query("SELECT * FROM food_items WHERE ownerId = :ownerId AND barcode = :barcode LIMIT 1")
+    suspend fun getByBarcode(ownerId: String, barcode: String): FoodItemEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFoodItem(item: FoodItemEntity): Long
 
-    @Query("UPDATE food_items SET isFavorite = :favorite WHERE id = :id")
-    suspend fun setFavorite(id: Long, favorite: Boolean)
+    @Query("UPDATE food_items SET isFavorite = :favorite WHERE ownerId = :ownerId AND id = :id")
+    suspend fun setFavorite(ownerId: String, id: Long, favorite: Boolean)
 
-    @Query("DELETE FROM food_items")
-    suspend fun clearAll()
+    @Query("DELETE FROM food_items WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
 interface WorkoutDao {
-    @Query("SELECT * FROM workout_logs ORDER BY timestamp DESC")
-    fun getWorkoutLogsFlow(): Flow<List<WorkoutLogEntity>>
+    @Query("SELECT * FROM workout_logs WHERE ownerId = :ownerId ORDER BY timestamp DESC")
+    fun getWorkoutLogsFlow(ownerId: String): Flow<List<WorkoutLogEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkoutLog(log: WorkoutLogEntity)
 
-    @Delete
-    suspend fun deleteWorkoutLog(log: WorkoutLogEntity)
+    @Query("DELETE FROM workout_logs WHERE ownerId = :ownerId AND id = :id")
+    suspend fun deleteWorkoutLog(ownerId: String, id: Int)
 
-    @Query("DELETE FROM workout_logs")
-    suspend fun clearAll()
+    @Query("DELETE FROM workout_logs WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
 interface ActivitySessionDao {
-    @Query("SELECT * FROM activity_sessions ORDER BY timestamp DESC")
-    fun getActivitySessionsFlow(): Flow<List<ActivitySessionEntity>>
+    @Query("SELECT * FROM activity_sessions WHERE ownerId = :ownerId ORDER BY timestamp DESC")
+    fun getActivitySessionsFlow(ownerId: String): Flow<List<ActivitySessionEntity>>
 
-    @Query("SELECT * FROM activity_sessions WHERE discipline = :discipline ORDER BY timestamp DESC")
-    fun getActivitySessionsForDisciplineFlow(discipline: String): Flow<List<ActivitySessionEntity>>
+    @Query("SELECT * FROM activity_sessions WHERE ownerId = :ownerId AND discipline = :discipline ORDER BY timestamp DESC")
+    fun getActivitySessionsForDisciplineFlow(ownerId: String, discipline: String): Flow<List<ActivitySessionEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertActivitySession(session: ActivitySessionEntity)
 
-    @Delete
-    suspend fun deleteActivitySession(session: ActivitySessionEntity)
+    @Query("DELETE FROM activity_sessions WHERE ownerId = :ownerId AND id = :id")
+    suspend fun deleteActivitySession(ownerId: String, id: Long)
 
-    @Query("DELETE FROM activity_sessions")
-    suspend fun clearAll()
+    @Query("DELETE FROM activity_sessions WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
 interface HealthDao {
-    @Query("SELECT * FROM health_logs ORDER BY timestamp DESC")
-    fun getHealthLogsFlow(): Flow<List<HealthLogEntity>>
+    @Query("SELECT * FROM health_logs WHERE ownerId = :ownerId ORDER BY timestamp DESC")
+    fun getHealthLogsFlow(ownerId: String): Flow<List<HealthLogEntity>>
 
-    @Query("SELECT * FROM health_logs ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecentHealthLogsFlow(limit: Int): Flow<List<HealthLogEntity>>
+    @Query("SELECT * FROM health_logs WHERE ownerId = :ownerId ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentHealthLogsFlow(ownerId: String, limit: Int): Flow<List<HealthLogEntity>>
 
-    @Query("SELECT * FROM health_logs WHERE timestamp >= :startDay AND timestamp <= :endDay ORDER BY timestamp DESC")
-    fun getHealthLogsForDayFlow(startDay: Long, endDay: Long): Flow<List<HealthLogEntity>>
+    @Query("SELECT * FROM health_logs WHERE ownerId = :ownerId AND timestamp >= :startDay AND timestamp <= :endDay ORDER BY timestamp DESC")
+    fun getHealthLogsForDayFlow(ownerId: String, startDay: Long, endDay: Long): Flow<List<HealthLogEntity>>
 
-    @Query("SELECT * FROM health_logs WHERE dateKey = :dateKey ORDER BY timestamp DESC")
-    fun getHealthLogsForDateKeyFlow(dateKey: String): Flow<List<HealthLogEntity>>
+    @Query("SELECT * FROM health_logs WHERE ownerId = :ownerId AND dateKey = :dateKey ORDER BY timestamp DESC")
+    fun getHealthLogsForDateKeyFlow(ownerId: String, dateKey: String): Flow<List<HealthLogEntity>>
 
-    @Query("SELECT * FROM health_logs WHERE dateKey = :dateKey AND type = :type AND context = :context LIMIT 1")
-    suspend fun getHealthLogForDateTypeContext(dateKey: String, type: String, context: String): HealthLogEntity?
+    @Query("SELECT * FROM health_logs WHERE ownerId = :ownerId AND dateKey = :dateKey AND type = :type AND context = :context LIMIT 1")
+    suspend fun getHealthLogForDateTypeContext(ownerId: String, dateKey: String, type: String, context: String): HealthLogEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHealthLog(log: HealthLogEntity)
 
-    @Update
-    suspend fun updateHealthLog(log: HealthLogEntity)
+    @Query("SELECT COUNT(*) FROM health_logs WHERE ownerId = :ownerId AND id = :id")
+    suspend fun ownsHealthLog(ownerId: String, id: Int): Int
 
-    @Delete
-    suspend fun deleteHealthLog(log: HealthLogEntity)
+    @Transaction
+    suspend fun updateHealthLog(ownerId: String, log: HealthLogEntity): Boolean {
+        if (log.id == 0 || ownsHealthLog(ownerId, log.id) == 0) return false
+        insertHealthLog(log.copy(ownerId = ownerId))
+        return true
+    }
 
-    @Query("DELETE FROM health_logs")
-    suspend fun clearAll()
+    @Query("DELETE FROM health_logs WHERE ownerId = :ownerId AND id = :id")
+    suspend fun deleteHealthLog(ownerId: String, id: Int)
+
+    @Query("DELETE FROM health_logs WHERE ownerId = :ownerId")
+    suspend fun clearAll(ownerId: String)
 }
 
 @Dao
@@ -192,8 +198,8 @@ interface DailyMissionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMissions(missions: List<DailyMissionEntity>)
 
-    @Query("UPDATE daily_missions SET completed = :completed, completedAt = :completedAt WHERE id = :id")
-    suspend fun updateMissionStatus(id: Long, completed: Boolean, completedAt: Long?)
+    @Query("UPDATE daily_missions SET completed = :completed, completedAt = :completedAt WHERE userId = :userId AND id = :id")
+    suspend fun updateMissionStatus(userId: String, id: Long, completed: Boolean, completedAt: Long?)
     
     @Query("UPDATE daily_missions SET completed = :completed, completedAt = :completedAt WHERE userId = :userId AND date = :date AND missionKey = :missionKey")
     suspend fun updateMissionStatusByKey(userId: String, date: String, missionKey: String, completed: Boolean, completedAt: Long?)
@@ -209,4 +215,55 @@ interface AchievementDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAchievement(achievement: AchievementEntity)
+}
+
+@Dao
+interface AccountDataDao {
+    @Query("DELETE FROM users WHERE uid = :ownerId")
+    suspend fun deleteUser(ownerId: String)
+
+    @Query("DELETE FROM food_logs WHERE ownerId = :ownerId")
+    suspend fun deleteFoodLogs(ownerId: String)
+
+    @Query("DELETE FROM food_entries WHERE ownerId = :ownerId")
+    suspend fun deleteFoodEntries(ownerId: String)
+
+    @Query("DELETE FROM food_items WHERE ownerId = :ownerId")
+    suspend fun deleteFoodItems(ownerId: String)
+
+    @Query("DELETE FROM workout_logs WHERE ownerId = :ownerId")
+    suspend fun deleteWorkoutLogs(ownerId: String)
+
+    @Query("DELETE FROM activity_sessions WHERE ownerId = :ownerId")
+    suspend fun deleteActivitySessions(ownerId: String)
+
+    @Query("DELETE FROM health_logs WHERE ownerId = :ownerId")
+    suspend fun deleteHealthLogs(ownerId: String)
+
+    @Query("DELETE FROM daily_activity WHERE userId = :ownerId")
+    suspend fun deleteDailyActivity(ownerId: String)
+
+    @Query("DELETE FROM streaks WHERE userId = :ownerId")
+    suspend fun deleteStreaks(ownerId: String)
+
+    @Query("DELETE FROM daily_missions WHERE userId = :ownerId")
+    suspend fun deleteDailyMissions(ownerId: String)
+
+    @Query("DELETE FROM achievements WHERE userId = :ownerId")
+    suspend fun deleteAchievements(ownerId: String)
+
+    @Transaction
+    suspend fun deleteOwnerData(ownerId: String) {
+        deleteUser(ownerId)
+        deleteFoodLogs(ownerId)
+        deleteFoodEntries(ownerId)
+        deleteFoodItems(ownerId)
+        deleteWorkoutLogs(ownerId)
+        deleteActivitySessions(ownerId)
+        deleteHealthLogs(ownerId)
+        deleteDailyActivity(ownerId)
+        deleteStreaks(ownerId)
+        deleteDailyMissions(ownerId)
+        deleteAchievements(ownerId)
+    }
 }

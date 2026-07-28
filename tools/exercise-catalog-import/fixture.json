@@ -1,0 +1,6 @@
+[
+  {"id":"0002","name":"  Press-bánca!! ","body_part":"chest","equipment":"body weight","target":"pectorals","secondary_muscles":["triceps"],"instructions":{"en":"Press safely.","es":"Empuja con control."},"image":"forbidden.jpg","gif_url":"forbidden.gif","media_id":"x","attribution":"x"},
+  {"id":"0001","name":"New Row","body_part":"back","equipment":"dumbbell","target":"lats","secondary_muscles":["biceps"],"instructions":{"en":"Row the weight.","es":"Rema la mancuerna."}},
+  {"id":"0003","name":"Press banca inclinado","body_part":"chest","equipment":"barbell","target":"pectorals","secondary_muscles":[],"instructions":{"en":"Press on an incline.","es":"Empuja en banco inclinado."}},
+  {"id":"bad","name":"","body_part":"unknown","equipment":"mystery rig","target":"mystery","secondary_muscles":[],"instructions":{"en":"","es":""}}
+]

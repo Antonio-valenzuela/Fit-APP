@@ -1,0 +1,53 @@
+{
+  "runId": "20260711T012722",
+  "phase": "full",
+  "datasetId": "fitplan-gemini-food-benchmark-v1",
+  "transport": "published-backend-chat-proxy",
+  "sequential": true,
+  "pauseMs": 4000,
+  "resultCount": 30,
+  "groups": [
+    {
+      "group": "text",
+      "count": 10,
+      "success": 6,
+      "status429": 4,
+      "status503": 0,
+      "timeout": 0,
+      "jsonInvalid": 0,
+      "invalidResult": 0,
+      "p50Ms": 10682,
+      "p95Ms": 18562,
+      "meanPreparedBytes": 0,
+      "qualityPass": 6
+    },
+    {
+      "group": "image_optimized",
+      "count": 10,
+      "success": 2,
+      "status429": 8,
+      "status503": 0,
+      "timeout": 0,
+      "jsonInvalid": 0,
+      "invalidResult": 0,
+      "p50Ms": 6746,
+      "p95Ms": 10946,
+      "meanPreparedBytes": 116494,
+      "qualityPass": 2
+    },
+    {
+      "group": "image_realistic",
+      "count": 10,
+      "success": 1,
+      "status429": 9,
+      "status503": 0,
+      "timeout": 0,
+      "jsonInvalid": 0,
+      "invalidResult": 0,
+      "p50Ms": 9827,
+      "p95Ms": 9827,
+      "meanPreparedBytes": 682738,
+      "qualityPass": 1
+    }
+  ]
+}

@@ -53,7 +53,6 @@ fun DeveloperSettingsScreen(
     val settings by viewModel.featureSettings.collectAsStateWithLifecycle()
     val profile by viewModel.visualPerformanceProfile.collectAsStateWithLifecycle()
     val preferences by viewModel.performancePreferences.collectAsStateWithLifecycle()
-    val isPremium by viewModel.isPremiumActive.collectAsStateWithLifecycle()
     val isDark = LocalThemeIsDark.current
     val context = LocalContext.current
 
@@ -131,23 +130,6 @@ fun DeveloperSettingsScreen(
                     ) {
                         Icon(Icons.Default.Speed, contentDescription = null)
                         Text("Forzar gama alta / visual", modifier = Modifier.padding(start = 8.dp))
-                    }
-                    Button(
-                        onClick = {
-                            viewModel.patchPremiumAccess(!isPremium)
-                            Toast.makeText(
-                                context,
-                                if (isPremium) "Premium local desactivado" else "Premium local activado",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Stars, contentDescription = null)
-                        Text(
-                            if (isPremium) "Desactivar premium local" else "Activar premium local",
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
                     }
                     Button(
                         onClick = {

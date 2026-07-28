@@ -18,6 +18,10 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    companion object {
+        var navControllerInstance: androidx.navigation.NavHostController? = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -25,6 +29,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val fitPlanViewModel: FitPlanViewModel = viewModel()
             val navController = rememberNavController()
+            navControllerInstance = navController
             val themeSelector by fitPlanViewModel.themeSelector.collectAsStateWithLifecycle()
             val visualPerformanceProfile by fitPlanViewModel.visualPerformanceProfile.collectAsStateWithLifecycle()
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()

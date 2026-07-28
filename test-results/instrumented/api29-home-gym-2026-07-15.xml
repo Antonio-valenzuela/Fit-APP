@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="2" failures="0" errors="0" skipped="0" time="14.731" timestamp="2026-07-15T20:37:34" hostname="localhost">
+  <testsuite name="com.example.HomeVsGymInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="12.639" timestamp="2026-07-15T20:37:34" hostname="localhost">
+    <properties>
+      <property name="device" value="FitPlan_API_29(AVD) - 10" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="gymProfileSelectsGymAndShowsGymRoutineEvenAtThirtyMinutes" classname="com.example.HomeVsGymInstrumentedTest" time="7.963" />
+    <testcase name="homeProfileSelectsHomeAndShowsHomeRoutine" classname="com.example.HomeVsGymInstrumentedTest" time="4.676" />
+  </testsuite>
+</testsuites>

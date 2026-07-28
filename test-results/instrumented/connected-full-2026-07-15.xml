@@ -1,0 +1,210 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="36" failures="6" errors="0" skipped="1" time="248.796" timestamp="2026-07-15T18:49:32" hostname="localhost">
+  <testsuite name="com.example.AuthenticationOnboardingInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="28.194" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="completesLocalLoginAndAllOnboardingSteps" classname="com.example.AuthenticationOnboardingInstrumentedTest" time="16.361" />
+    <testcase name="weeklyPlanSelectionsRecalculateDependentInformation" classname="com.example.AuthenticationOnboardingInstrumentedTest" time="7.416" />
+    <testcase name="emptyCredentialsRemainOnLoginAndShowBothErrors" classname="com.example.AuthenticationOnboardingInstrumentedTest" time="4.417" />
+  </testsuite>
+  <testsuite name="com.example.CompleteWorkoutInstrumentedTest" tests="1" failures="1" errors="0" skipped="0" time="5.44" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="completesSavesShowsHistoryAndRejectsDuplicateSave" classname="com.example.CompleteWorkoutInstrumentedTest" time="5.44">
+      <failure>java.lang.AssertionError: No node found that matches TestTag = 'start_routine_hamstrings_glutes' in scrollable container
+Semantics of the node:
+Node #1115 at (l=42.0, t=63.0, r=1038.0, b=2127.0)px
+IsTraversalGroup = 'true'
+VerticalScrollAxisRange = 'ScrollAxisRange(value=3733.0, maxValue=3733.0, reverseScrolling=false)'
+CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo&#64;6a2cde'
+Actions = [ScrollBy, ScrollByOffset, IndexForKey, ScrollToIndex, GetScrollViewportLength]
+Has 7 children, 1 sibling
+Selector used: ((ScrollBy is defined)[0])
+
+at androidx.compose.ui.test.ActionsKt.performScrollToNode(Actions.kt:264)
+at com.example.CompleteWorkoutInstrumentedTest.scrollToTag(CompleteWorkoutInstrumentedTest.kt:117)
+at com.example.CompleteWorkoutInstrumentedTest.completesSavesShowsHistoryAndRejectsDuplicateSave(CompleteWorkoutInstrumentedTest.kt:77)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="com.example.ControlledStressInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="65.219" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="changesBottomTabsThirtyTimesWithoutAmbiguousInput" classname="com.example.ControlledStressInstrumentedTest" time="19.262" />
+    <testcase name="recreatesActivityFiveTimesWithoutDuplicateDestination" classname="com.example.ControlledStressInstrumentedTest" time="7.787" />
+    <testcase name="opensProgressAndMuscleMapTwentyTimesEach" classname="com.example.ControlledStressInstrumentedTest" time="38.17" />
+  </testsuite>
+  <testsuite name="com.example.CriticalNavigationInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="12.853" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="opensCriticalDestinationsAndReturnsSafely" classname="com.example.CriticalNavigationInstrumentedTest" time="7.807" />
+    <testcase name="doubleTapAndActivityRecreationDoNotDuplicateNavigation" classname="com.example.CriticalNavigationInstrumentedTest" time="5.046" />
+  </testsuite>
+  <testsuite name="com.example.DisciplineScreenTraversalInstrumentedTest" tests="5" failures="0" errors="0" skipped="0" time="31.407" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="runningOpensTrackerAndHistory" classname="com.example.DisciplineScreenTraversalInstrumentedTest" time="7.527" />
+    <testcase name="hybridOpensDailyPlanCardioAndWellness" classname="com.example.DisciplineScreenTraversalInstrumentedTest" time="7.664" />
+    <testcase name="walkingOpensTrackerAndHistory" classname="com.example.DisciplineScreenTraversalInstrumentedTest" time="5.055" />
+    <testcase name="wellnessOpensDiaryAndDailyCheckIn" classname="com.example.DisciplineScreenTraversalInstrumentedTest" time="5.619" />
+    <testcase name="cyclingOpensTrackerAndHistory" classname="com.example.DisciplineScreenTraversalInstrumentedTest" time="5.542" />
+  </testsuite>
+  <testsuite name="com.example.ExampleInstrumentedTest" tests="1" failures="0" errors="0" skipped="0" time="0.007" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="useAppContext" classname="com.example.ExampleInstrumentedTest" time="0.007" />
+  </testsuite>
+  <testsuite name="com.example.ExerciseCatalogBootstrapInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="14.12" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="filtersAndSpanishAliasesWorkAfterBootstrap" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="7.404" />
+    <testcase name="bootstrapRollsBackOnCanonicalConflict" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="0.615" />
+    <testcase name="bootstrapIsIdempotentAndKeepsExpectedMappingsAndCanonicals" classname="com.example.ExerciseCatalogBootstrapInstrumentedTest" time="6.101" />
+  </testsuite>
+  <testsuite name="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="0.499" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="migration10To11PreservesSentinelRowsAndCreatesAllCatalogTables" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="0.389" />
+    <testcase name="searchIndexFollowsContentEntityForInsertUpdateDeleteAndRebuild" classname="com.example.ExerciseCatalogRoomMigrationInstrumentedTest" time="0.11" />
+  </testsuite>
+  <testsuite name="com.example.GeminiUiLifecycleInstrumentedTest" tests="4" failures="3" errors="0" skipped="1" time="12.823" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="consentCanBeCancelledWithoutSendingAndRequestRemainsRetryable" classname="com.example.GeminiUiLifecycleInstrumentedTest" time="3.415">
+      <failure>java.lang.AssertionError: Failed to inject touch input.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'bottom_nav_nutrition')
+
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+at androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:394)
+at androidx.compose.ui.test.Actions_androidKt.performClickImpl(Actions.android.kt:20)
+at androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:54)
+at com.example.GeminiUiLifecycleInstrumentedTest.launchNutritionDialog(GeminiUiLifecycleInstrumentedTest.kt:61)
+</failure>
+    </testcase>
+    <testcase name="onePublicImageTraversesLoadingAndARecoverableFinalState" classname="com.example.GeminiUiLifecycleInstrumentedTest" time="0.009">
+      <skipped />
+    </testcase>
+    <testcase name="repeatedConsentCancellationNeverStartsARequest" classname="com.example.GeminiUiLifecycleInstrumentedTest" time="5.186">
+      <failure>java.lang.AssertionError: Failed to inject touch input.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'bottom_nav_nutrition')
+
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+at androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:394)
+at androidx.compose.ui.test.Actions_androidKt.performClickImpl(Actions.android.kt:20)
+at androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:54)
+at com.example.GeminiUiLifecycleInstrumentedTest.launchNutritionDialog(GeminiUiLifecycleInstrumentedTest.kt:61)
+</failure>
+    </testcase>
+    <testcase name="preparedConsentSurvivesRecreationAndBackgroundReturnWithoutSending" classname="com.example.GeminiUiLifecycleInstrumentedTest" time="4.213">
+      <failure>java.lang.AssertionError: Failed to inject touch input.
+Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'bottom_nav_nutrition')
+
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)
+at androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)
+at androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:394)
+at androidx.compose.ui.test.Actions_androidKt.performClickImpl(Actions.android.kt:20)
+at androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:54)
+at com.example.GeminiUiLifecycleInstrumentedTest.launchNutritionDialog(GeminiUiLifecycleInstrumentedTest.kt:61)
+</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="com.example.GpsPermissionsInstrumentedTest" tests="4" failures="1" errors="0" skipped="0" time="30.045" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="a_deniedAndUserFixedPermissionRemainsRecoverable" classname="com.example.GpsPermissionsInstrumentedTest" time="7.48">
+      <failure>java.lang.IllegalStateException: El diálogo no expuso un botón de denegación identificable
+at com.example.GpsPermissionsInstrumentedTest.denyPermissionDialog(GpsPermissionsInstrumentedTest.kt:176)
+at com.example.GpsPermissionsInstrumentedTest.a_deniedAndUserFixedPermissionRemainsRecoverable(GpsPermissionsInstrumentedTest.kt:68)
+</failure>
+    </testcase>
+    <testcase name="b_locationOffShowsErrorThenRunningPausesResumesAndFinishes" classname="com.example.GpsPermissionsInstrumentedTest" time="9.211" />
+    <testcase name="c_walkingUsesTheSameControlledGpsLifecycle" classname="com.example.GpsPermissionsInstrumentedTest" time="7.685" />
+    <testcase name="d_cyclingUsesTheSameControlledGpsLifecycle" classname="com.example.GpsPermissionsInstrumentedTest" time="5.669" />
+  </testsuite>
+  <testsuite name="com.example.HomeVsGymInstrumentedTest" tests="2" failures="1" errors="0" skipped="0" time="10.066" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="gymProfileSelectsGymAndShowsGymRoutineEvenAtThirtyMinutes" classname="com.example.HomeVsGymInstrumentedTest" time="4.839">
+      <failure>java.lang.AssertionError: No node found that matches TestTag = 'routine_card_hamstrings_glutes' in scrollable container
+Semantics of the node:
+Node #23370 at (l=42.0, t=63.0, r=1038.0, b=2127.0)px
+IsTraversalGroup = 'true'
+VerticalScrollAxisRange = 'ScrollAxisRange(value=3733.0, maxValue=3733.0, reverseScrolling=false)'
+CollectionInfo = 'androidx.compose.ui.semantics.CollectionInfo&#64;4204ad0'
+Actions = [ScrollBy, ScrollByOffset, IndexForKey, ScrollToIndex, GetScrollViewportLength]
+Has 7 children, 1 sibling
+Selector used: ((ScrollBy is defined)[0])
+
+at androidx.compose.ui.test.ActionsKt.performScrollToNode(Actions.kt:264)
+at com.example.HomeVsGymInstrumentedTest.scrollToRoutine(HomeVsGymInstrumentedTest.kt:110)
+at com.example.HomeVsGymInstrumentedTest.gymProfileSelectsGymAndShowsGymRoutineEvenAtThirtyMinutes(HomeVsGymInstrumentedTest.kt:67)
+</failure>
+    </testcase>
+    <testcase name="homeProfileSelectsHomeAndShowsHomeRoutine" classname="com.example.HomeVsGymInstrumentedTest" time="5.227" />
+  </testsuite>
+  <testsuite name="com.example.PersistenceLifecycleInstrumentedTest" tests="2" failures="0" errors="0" skipped="0" time="10.156" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="a_seedAndVerifyRecreationAndBackground" classname="com.example.PersistenceLifecycleInstrumentedTest" time="7.125" />
+    <testcase name="b_verifyDurableSentinelsAfterExternalRestart" classname="com.example.PersistenceLifecycleInstrumentedTest" time="3.031" />
+  </testsuite>
+  <testsuite name="com.example.PhysicalScreenTraversalInstrumentedTest" tests="3" failures="0" errors="0" skipped="0" time="24.832" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="logoutReturnsToLoginWithoutUsingDestructiveDataActions" classname="com.example.PhysicalScreenTraversalInstrumentedTest" time="4.2" />
+    <testcase name="opensSettingsPerformancePremiumAndSafeDialogs" classname="com.example.PhysicalScreenTraversalInstrumentedTest" time="10.221" />
+    <testcase name="opensDashboardHealthNutritionWorkoutAndMuscleActions" classname="com.example.PhysicalScreenTraversalInstrumentedTest" time="10.411" />
+  </testsuite>
+  <testsuite name="com.example.ui.screens.NutritionPhotoPreparationInstrumentedTest" tests="1" failures="0" errors="0" skipped="0" time="0.142" timestamp="2026-07-15T18:49:32" hostname="localhost">
+    <properties>
+      <property name="device" value="Medium_Phone_API_36(AVD) - 16" />
+      <property name="flavor" value="" />
+      <property name="project" value=":app" />
+    </properties>
+    <testcase name="readableFileProviderPhotoSurvivesAndroidBoundsDecode" classname="com.example.ui.screens.NutritionPhotoPreparationInstrumentedTest" time="0.142" />
+  </testsuite>
+</testsuites>

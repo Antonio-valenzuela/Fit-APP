@@ -1,34 +1,76 @@
 'use strict'
 
-require('dotenv').config()
-const express = require('express')
-const cors = require('cors')
-const { registerApiRoutes } = require('./routes')
+const db = require('./db')
+const { createMySqlDatabase } = db
+const { loadSecurityConfig } = require('./config/security')
+const { createApp } = require('./server/app')
+const { createServerLifecycle } = require('./server/lifecycle')
+const { createSecurityLogger } = require('./services/securityLogger')
 
-const app = express()
-const PORT = process.env.PORT || 3000
+async function startServer({
+  env = process.env,
+  appFactory = createApp,
+  databaseFactory = createMySqlDatabase,
+  securityLogger = createSecurityLogger(),
+  processRef = process,
+  exit = code => processRef.exit(code),
+  resources,
+  host = '0.0.0.0'
+} = {}) {
+  const securityConfig = loadSecurityConfig(env)
+  const database = await databaseFactory({
+    databaseUrl: securityConfig.databaseUrl,
+    databaseTls: securityConfig.databaseTls,
+    logger: securityLogger
+  })
+  db.configure({
+    logger: securityLogger,
+    execute: (sql, params) => database.query(sql, params),
+    close: null
+  })
+  const app = appFactory({ securityConfig, securityLogger, database })
+  const server = app.listen(securityConfig.port, host)
+  const lifecycle = createServerLifecycle({
+    server,
+    resources: resources || [database],
+    processRef,
+    logger: securityLogger,
+    shutdownTimeoutMs: securityConfig.shutdownTimeoutMs,
+    exit
+  })
 
-app.use(cors())
-app.use(express.json({ limit: '10mb' })) // allow larger payloads for vision base64 images
+  server.once('listening', () => {
+    securityLogger.info?.({ event: 'server.listening' })
+  })
+  server.once('error', error => {
+    lifecycle.shutdown({
+      reason: 'server_error',
+      exitCode: 1,
+      exitProcess: true,
+      errorType: error?.name || 'Error'
+    }).catch(() => exit(1))
+  })
 
-registerApiRoutes(app)
+  return Object.freeze({
+    app,
+    server,
+    securityConfig,
+    shutdown: options => lifecycle.shutdown(options),
+    dispose: lifecycle.dispose
+  })
+}
 
-// Basic home route
-app.get('/', (req, res) => {
-  res.json({ ok: true, message: 'FitPlan MX Backend API Proxy is running.' })
-})
+if (require.main === module) {
+  const securityLogger = createSecurityLogger()
+  startServer({ securityLogger }).catch(error => {
+    securityLogger.error({
+      event: 'server.startup_failed',
+      errorType: error?.name || 'Error'
+    })
+    process.exitCode = 1
+  })
+}
 
-// General health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'UP', timestamp: new Date().toISOString() })
-})
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('[Unhandled Error]', err.message)
-  res.status(500).json({ error: 'Internal Server Error' })
-})
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server listening on port ${PORT} (host: 0.0.0.0)`)
-})
+module.exports = {
+  startServer
+}

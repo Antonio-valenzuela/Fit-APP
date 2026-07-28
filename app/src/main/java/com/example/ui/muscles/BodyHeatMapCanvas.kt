@@ -291,6 +291,9 @@ private fun backHitZones(): List<HitZone> {
         HitZone("hombros", 0.23f, 0.16f, 0.14f, 0.08f),
         HitZone("hombros", 0.63f, 0.16f, 0.14f, 0.08f),
         HitZone("espalda", 0.34f, 0.20f, 0.32f, 0.25f),
+        // AnatomyPanel resolves overlaps with lastOrNull; keep traps after back
+        // so the dedicated upper-back region remains independently selectable.
+        HitZone("trapecio", 0.38f, 0.16f, 0.24f, 0.12f),
         HitZone("triceps", 0.18f, 0.28f, 0.08f, 0.14f),
         HitZone("triceps", 0.74f, 0.28f, 0.08f, 0.14f),
         HitZone("gluteos", 0.35f, 0.49f, 0.30f, 0.11f),
@@ -349,7 +352,7 @@ private fun DrawScope.drawBackHeatOverlay(
 
     drawMuscle("espalda", backLeftLat(w, h), heatmap, selected)
     drawMuscle("espalda", backRightLat(w, h), heatmap, selected)
-    drawMuscle("espalda", backTraps(w, h), heatmap, selected)
+    drawMuscle("trapecio", backTraps(w, h), heatmap, selected)
 
     drawMuscle("triceps", backLeftTriceps(w, h), heatmap, selected)
     drawMuscle("triceps", backRightTriceps(w, h), heatmap, selected)
@@ -601,9 +604,27 @@ private fun backRightLat(w: Float, h: Float): Path {
     }
 }
 
-private fun backLeftTriceps(w: Float, h: Float): Path = frontLeftBiceps(w, h)
+private fun backLeftTriceps(w: Float, h: Float): Path {
+    return Path().apply {
+        // Posterior arm — triceps sits on the outer/back side, wider at top
+        moveTo(w * 0.195f, h * 0.270f)
+        cubicTo(w * 0.160f, h * 0.320f, w * 0.150f, h * 0.390f, w * 0.185f, h * 0.445f)
+        cubicTo(w * 0.215f, h * 0.420f, w * 0.240f, h * 0.350f, w * 0.240f, h * 0.290f)
+        cubicTo(w * 0.225f, h * 0.265f, w * 0.210f, h * 0.260f, w * 0.195f, h * 0.270f)
+        close()
+    }
+}
 
-private fun backRightTriceps(w: Float, h: Float): Path = frontRightBiceps(w, h)
+private fun backRightTriceps(w: Float, h: Float): Path {
+    return Path().apply {
+        // Mirror of left triceps
+        moveTo(w * 0.805f, h * 0.270f)
+        cubicTo(w * 0.840f, h * 0.320f, w * 0.850f, h * 0.390f, w * 0.815f, h * 0.445f)
+        cubicTo(w * 0.785f, h * 0.420f, w * 0.760f, h * 0.350f, w * 0.760f, h * 0.290f)
+        cubicTo(w * 0.775f, h * 0.265f, w * 0.790f, h * 0.260f, w * 0.805f, h * 0.270f)
+        close()
+    }
+}
 
 private fun backLeftGlute(w: Float, h: Float): Path {
     return Path().apply {

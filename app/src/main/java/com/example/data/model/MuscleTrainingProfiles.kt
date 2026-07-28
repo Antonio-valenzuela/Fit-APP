@@ -4,7 +4,7 @@ object MuscleTrainingProfiles {
     val ALL_MUSCLES = listOf(
         Muscle.CHEST, Muscle.BACK, Muscle.SHOULDERS, Muscle.BICEPS, Muscle.TRICEPS,
         Muscle.QUADS, Muscle.HAMSTRINGS, Muscle.GLUTES, Muscle.CALVES,
-        Muscle.ABS, Muscle.FOREARMS
+        Muscle.ABS, Muscle.FOREARMS, Muscle.TRAPS, Muscle.ADDUCTORS, Muscle.ABDUCTORS
     )
 
     val FUNCTIONAL_STRENGTH_PROFILE = listOf(

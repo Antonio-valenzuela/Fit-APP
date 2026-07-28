@@ -84,8 +84,8 @@ class DailyMissionRepository(private val dao: DailyMissionDao) {
         dao.insertMissions(missions)
     }
 
-    suspend fun updateMissionStatus(id: Long, completed: Boolean, completedAt: Long?) {
-        dao.updateMissionStatus(id, completed, completedAt)
+    suspend fun updateMissionStatus(userId: String, id: Long, completed: Boolean, completedAt: Long?) {
+        dao.updateMissionStatus(userId, id, completed, completedAt)
     }
 
     suspend fun updateMissionStatusByKey(userId: String, date: String, missionKey: String, completed: Boolean, completedAt: Long?) {
@@ -241,7 +241,7 @@ class DailyMissionManager(
         val missions = missionRepo.getMissionsForDay(userId, todayStr)
         val matched = missions.firstOrNull { it.missionKey == missionKey && !it.completed }
         if (matched != null) {
-            missionRepo.updateMissionStatus(matched.id, true, System.currentTimeMillis())
+            missionRepo.updateMissionStatus(userId, matched.id, true, System.currentTimeMillis())
             
             // Mark action in active activities log
             streakManager.updateStreak(userId)

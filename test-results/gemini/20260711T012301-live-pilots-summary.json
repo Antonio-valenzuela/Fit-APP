@@ -1,0 +1,25 @@
+{
+  "runId": "20260711T012301",
+  "phase": "pilots",
+  "datasetId": "fitplan-gemini-food-benchmark-v1",
+  "transport": "published-backend-chat-proxy",
+  "sequential": true,
+  "pauseMs": 4000,
+  "resultCount": 1,
+  "groups": [
+    {
+      "group": "pilot",
+      "count": 1,
+      "success": 1,
+      "status429": 0,
+      "status503": 0,
+      "timeout": 0,
+      "jsonInvalid": 0,
+      "invalidResult": 0,
+      "p50Ms": 7493,
+      "p95Ms": 7493,
+      "meanPreparedBytes": 50310,
+      "qualityPass": 1
+    }
+  ]
+}

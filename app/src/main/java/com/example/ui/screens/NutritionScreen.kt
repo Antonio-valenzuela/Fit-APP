@@ -8,7 +8,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -151,11 +149,10 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     val isDark = LocalThemeIsDark.current
     val scope = rememberCoroutineScope()
-    val featureGeminiFoodScanEnabled = false
+    val featureGeminiFoodScanEnabled = PremiumAccessPolicy.isTestMode
     val canUseGeminiFoodScan = PremiumAccessPolicy.canUseGeminiFoodScan(
         isPremiumActive = isPremium,
-        featureEnabled = featureGeminiFoodScanEnabled,
-        isDebugBuild = BuildConfig.DEBUG
+        featureEnabled = featureGeminiFoodScanEnabled
     )
     fun createFoodPhotoUri(): Uri {
         val dir = File(context.cacheDir, "food_photos").apply { mkdirs() }
@@ -361,7 +358,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("nutrition_screen").frostedMeshBackground(isDark),
         bottomBar = { FitPlanBottomBar(Destinations.NUTRITION, onNavigate, isPremium, discipline) }
     ) { innerPadding ->
         Column(
@@ -536,6 +533,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     .fillMaxWidth()
                     .fillMaxHeight(0.92f)
                     .padding(16.dp)
+                    .testTag("food_entry_dialog")
             ) {
                 Column(
                     modifier = Modifier
@@ -551,7 +549,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     OutlinedButton(
                         onClick = { startFoodPhotoFlow() },
                         enabled = !aiLoading,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("gemini_scan_button")
                     ) {
                         if (aiLoading) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -571,7 +569,9 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("gemini_phase_${geminiState.phase.name.lowercase()}")
                         ) {
                             Image(
                                 bitmap = preview.asImageBitmap(),
@@ -613,7 +613,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         OutlinedButton(
                             onClick = { retryAnalysis() },
                             enabled = geminiState.canRetry,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).testTag("gemini_retry_button")
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
@@ -628,7 +628,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                                 }
                             },
                             enabled = true,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f).testTag("gemini_cancel_or_manual_button")
                         ) {
                             Text(if (aiLoading) "Cancelar" else "Manual")
                         }
@@ -827,6 +827,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     if (showGeminiConsentDialog) {
         AlertDialog(
+            modifier = Modifier.testTag("gemini_consent_dialog"),
             onDismissRequest = {
                 showGeminiConsentDialog = false
                 geminiConsentChecked = false
@@ -844,7 +845,8 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                     ) {
                         Checkbox(
                             checked = geminiConsentChecked,
-                            onCheckedChange = { geminiConsentChecked = it }
+                            onCheckedChange = { geminiConsentChecked = it },
+                            modifier = Modifier.testTag("gemini_consent_checkbox")
                         )
                         Text(
                             "Entiendo y acepto enviar esta imagen/datos a Gemini.",
@@ -856,6 +858,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             confirmButton = {
                 Button(
                     enabled = geminiConsentChecked && geminiState.request != null,
+                    modifier = Modifier.testTag("gemini_consent_send"),
                     onClick = {
                         showGeminiConsentDialog = false
                         geminiConsentChecked = false
@@ -867,6 +870,7 @@ fun NutritionScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
             },
             dismissButton = {
                 TextButton(
+                    modifier = Modifier.testTag("gemini_consent_cancel"),
                     onClick = {
                         showGeminiConsentDialog = false
                         geminiConsentChecked = false
@@ -1017,11 +1021,13 @@ private fun NutritionPrimaryActions(
             )
             AssistChip(
                 onClick = onFavorites,
+                modifier = Modifier.testTag("open_favorites_button"),
                 leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 label = { Text("Favoritos") }
             )
             AssistChip(
                 onClick = onFrequent,
+                modifier = Modifier.testTag("open_frequent_button"),
                 leadingIcon = { Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 label = { Text("Frecuentes") }
             )
@@ -1214,6 +1220,9 @@ private fun FoodItemPickerDialog(
     onSelect: (FoodItemEntity) -> Unit
 ) {
     AlertDialog(
+        modifier = Modifier.testTag(
+            if (title == "Alimentos favoritos") "favorites_dialog" else "frequent_dialog"
+        ),
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -1324,6 +1333,15 @@ internal object GeminiNutritionConsent {
         "Al continuar, aceptas enviar esta imagen/datos a Gemini para analisis. FitPlan no sustituye diagnóstico médico."
 }
 
+internal fun <T> useRequiredInputStream(
+    openStream: () -> java.io.InputStream?,
+    missingMessage: String,
+    block: (java.io.InputStream) -> T
+): T {
+    val input = openStream() ?: throw IllegalStateException(missingMessage)
+    return input.use(block)
+}
+
 internal fun prepareFoodImage(
     context: Context,
     uri: Uri,
@@ -1331,9 +1349,12 @@ internal fun prepareFoodImage(
 ): PreparedFoodImage {
     val originalBytes = contentLength(context, uri)
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    context.contentResolver.openInputStream(uri)?.use { input ->
+    useRequiredInputStream(
+        openStream = { context.contentResolver.openInputStream(uri) },
+        missingMessage = "No se pudo leer la foto tomada."
+    ) { input ->
         BitmapFactory.decodeStream(input, null, bounds)
-    } ?: throw IllegalStateException("No se pudo leer la foto tomada.")
+    }
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
         throw IllegalStateException("La foto no contiene dimensiones validas.")
     }
@@ -1384,11 +1405,6 @@ internal fun prepareFoodImage(
         throw IllegalStateException("La foto preparada es demasiado grande. Elige una imagen mas pequena.")
     }
 
-    Log.d(
-        "NutritionScreen",
-        "Food photo prepared: profile=${profile.id}, original=${originalWidth}x${originalHeight}, " +
-            "originalBytes=$originalBytes, sent=${resized.width}x${resized.height}, bytes=${bytes.size}, quality=${profile.jpegQuality}"
-    )
     return PreparedFoodImage(
         bytes = bytes,
         width = resized.width,

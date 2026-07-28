@@ -1,30 +1,48 @@
 package com.example.data.model
 
+import com.example.BuildConfig
+
+/**
+ * Resolves access without mutating purchase state. [premiumTestMode] is an
+ * in-memory build capability; [realEntitlement] remains the Billing-owned value.
+ */
+internal class PremiumEntitlementProvider(
+    val premiumTestMode: Boolean
+) {
+    fun hasPremiumAccess(realEntitlement: Boolean): Boolean =
+        premiumTestMode || realEntitlement
+
+    fun canUsePremiumFeature(
+        realEntitlement: Boolean,
+        featureEnabled: Boolean
+    ): Boolean = premiumTestMode || (realEntitlement && featureEnabled)
+}
+
 object PremiumAccessPolicy {
-    const val FORCE_UNLOCK_ALL_FEATURES_FOR_TESTING: Boolean = true
     const val PREMIUM_ENABLED: Boolean = false
 
-    fun isPremiumActive(
-        storedPremiumUnlocked: Boolean,
-        isDebugBuild: Boolean,
-        forceUnlockForTesting: Boolean = FORCE_UNLOCK_ALL_FEATURES_FOR_TESTING
-    ): Boolean = forceUnlockForTesting || isDebugBuild || storedPremiumUnlocked
+    private val entitlementProvider = PremiumEntitlementProvider(
+        // Defense in depth: a release build cannot enable the QA bypass even if
+        // PREMIUM_TEST_MODE were accidentally changed in its Gradle configuration.
+        premiumTestMode = BuildConfig.DEBUG && BuildConfig.PREMIUM_TEST_MODE
+    )
 
-    fun storedPremiumFromLocalPatch(
-        enabled: Boolean,
-        isDebugBuild: Boolean
-    ): Boolean = enabled && isDebugBuild
+    val isTestMode: Boolean
+        get() = entitlementProvider.premiumTestMode
+
+    fun isPremiumActive(storedPremiumUnlocked: Boolean): Boolean =
+        entitlementProvider.hasPremiumAccess(realEntitlement = storedPremiumUnlocked)
 
     fun canUseGeminiFoodScan(
         isPremiumActive: Boolean,
-        featureEnabled: Boolean,
-        isDebugBuild: Boolean,
-        forceUnlockForTesting: Boolean = FORCE_UNLOCK_ALL_FEATURES_FOR_TESTING
-    ): Boolean = forceUnlockForTesting || isDebugBuild || (isPremiumActive && featureEnabled)
+        featureEnabled: Boolean
+    ): Boolean = entitlementProvider.canUsePremiumFeature(
+        realEntitlement = isPremiumActive,
+        featureEnabled = featureEnabled
+    )
 
     fun shouldShowPremiumEntryPoint(
         isPremiumActive: Boolean,
-        premiumEnabled: Boolean = PREMIUM_ENABLED,
-        forceUnlockForTesting: Boolean = FORCE_UNLOCK_ALL_FEATURES_FOR_TESTING
-    ): Boolean = premiumEnabled && !forceUnlockForTesting && !isPremiumActive
+        premiumEnabled: Boolean = PREMIUM_ENABLED
+    ): Boolean = premiumEnabled && !isPremiumActive
 }

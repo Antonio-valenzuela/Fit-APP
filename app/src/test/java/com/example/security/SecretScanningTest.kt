@@ -51,7 +51,7 @@ class SecretScanningTest {
             val match = apiPrefixPattern.find(content)
             if (match != null) {
                 assertFalse(
-                    "Alerta de Seguridad: Se detecto una API Key de Google hardcodeada en el archivo: ${file.name}! Encontrado: ${match.value}",
+                    "Alerta de Seguridad: Se detecto una API Key de Google hardcodeada en el archivo: ${file.name}; valor omitido.",
                     true
                 )
             }

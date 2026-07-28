@@ -1,8 +1,8 @@
 'use strict'
 
 const express = require('express')
-const rateLimit = require('express-rate-limit')
-const { authenticateToken } = require('../middleware/auth')
+const { authenticateToken, ensureAuthenticatedPrincipal, requireRole } = require('../middleware/auth')
+const { postAuthRateLimit } = require('../middleware/rateLimits')
 const {
   NutritionValidationError,
   buildGeminiRequest,
@@ -13,20 +13,13 @@ const { GeminiProvider, ProviderRequestError } = require('../services/geminiProv
 
 const router = express.Router()
 const MAX_PREPARED_IMAGE_BYTES = 4 * 1024 * 1024
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash'
+const DEFAULT_MODEL = 'gemini-3.5-flash'
 const BENCHMARK_MODELS = Object.freeze([
   'gemini-3.5-flash',
   'gemini-3.1-flash-lite',
   'gemini-2.5-flash-lite'
 ])
-
-const geminiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  message: { error: 'Demasiadas peticiones. Limite de 20 solicitudes por minuto excedido.' },
-  standardHeaders: true,
-  legacyHeaders: false
-})
+const imageJsonParser = express.json({ limit: '6mb', strict: true })
 
 class VisionPayloadError extends Error {
   constructor(status, code, message) {
@@ -130,16 +123,7 @@ function friendlyProviderError(error) {
   }
 }
 
-function requireBenchmarkAccess(req, res, next) {
-  if (req.user?.id !== 'default_admin_user') {
-    return res.status(403).json({
-      error: 'El benchmark controlado requiere la credencial interna del backend.',
-      code: 'BENCHMARK_ACCESS_DENIED',
-      retryable: false
-    })
-  }
-  return next()
-}
+const requireBenchmarkAccess = requireRole('benchmark')
 
 function createVisionHandler({
   provider,
@@ -223,9 +207,10 @@ function createVisionHandler({
           attempt: error.attempt || 0
         })
       }
-      console.error('[Gemini Vision Error]', {
+      req.app?.locals?.securityLogger?.error?.({
+        event: 'gemini.vision.error',
         code: 'UNEXPECTED_VISION_ERROR',
-        requestId: validated?.requestId || null
+        requestId: req.id
       })
       return res.status(500).json({
         error: 'No fue posible completar el analisis. Tus datos se conservaron.',
@@ -289,9 +274,10 @@ function createTextBenchmarkHandler({ providerFactory, now = Date.now }) {
           attempt: error.attempt || 0
         })
       }
-      console.error('[Gemini Text Benchmark Error]', {
+      req.app?.locals?.securityLogger?.error?.({
+        event: 'gemini.text_benchmark.error',
         code: 'UNEXPECTED_TEXT_BENCHMARK_ERROR',
-        requestId: validated?.requestId || null
+        requestId: req.id
       })
       return res.status(500).json({
         error: 'No fue posible completar el benchmark de texto.',
@@ -304,16 +290,14 @@ function createTextBenchmarkHandler({ providerFactory, now = Date.now }) {
 }
 
 async function handleChat(req, res) {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
-    return res.status(500).json({ error: 'La API key de Gemini no esta configurada en el servidor backend.' })
-  }
+  const config = req.app.locals.securityConfig
+  const apiKey = config.geminiApiKey
   const controller = new AbortController()
-  const timeoutMs = Number(process.env.GEMINI_ATTEMPT_TIMEOUT_MS) || 20_000
+  const timeoutMs = config.geminiAttemptTimeoutMs ?? 20_000
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(DEFAULT_MODEL)}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.geminiModel || DEFAULT_MODEL)}:generateContent`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
@@ -325,7 +309,11 @@ async function handleChat(req, res) {
     return res.status(response.status).json(data)
   } catch (error) {
     const isTimeout = error?.name === 'AbortError'
-    console.error('[Gemini Chat Error]', { code: isTimeout ? 'PROVIDER_TIMEOUT' : 'PROVIDER_NETWORK' })
+    req.app?.locals?.securityLogger?.warn?.({
+      event: 'gemini.chat.error',
+      requestId: req.id,
+      code: isTimeout ? 'PROVIDER_TIMEOUT' : 'PROVIDER_NETWORK'
+    })
     return res.status(isTimeout ? 504 : 502).json({
       error: isTimeout ? 'La respuesta de Gemini tardo demasiado.' : 'No fue posible comunicarse con Gemini.'
     })
@@ -335,42 +323,60 @@ async function handleChat(req, res) {
 }
 
 const sharedProviders = new Map()
-function getSharedProvider(model = DEFAULT_MODEL) {
+function getSharedProvider(apiKey, model = DEFAULT_MODEL, attemptTimeoutMs = 20_000, logger) {
   if (!sharedProviders.has(model)) {
     sharedProviders.set(model, new GeminiProvider({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey,
       model,
-      logger: console
+      logger,
+      attemptTimeoutMs
     }))
   }
   return sharedProviders.get(model)
 }
 
-router.post('/chat', authenticateToken, geminiLimiter, handleChat)
-router.post('/vision', authenticateToken, geminiLimiter, (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
-    return res.status(500).json({ error: 'La API key de Gemini no esta configurada en el servidor backend.' })
-  }
-  return createVisionHandler({ provider: getSharedProvider() })(req, res)
-})
-router.post('/benchmark/vision', authenticateToken, requireBenchmarkAccess, geminiLimiter, (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
-    return res.status(500).json({ error: 'La API key de Gemini no esta configurada en el servidor backend.' })
-  }
+router.use(authenticateToken, postAuthRateLimit, ensureAuthenticatedPrincipal)
+
+router.post('/chat', handleChat)
+router.post('/vision', imageJsonParser, (req, res) => {
+  const config = req.app.locals.securityConfig
   return createVisionHandler({
-    provider: getSharedProvider(),
-    providerFactory: getSharedProvider,
+    provider: getSharedProvider(
+      config.geminiApiKey,
+      config.geminiModel,
+      config.geminiAttemptTimeoutMs,
+      req.app.locals.securityLogger
+    )
+  })(req, res)
+})
+router.post('/benchmark/vision', requireBenchmarkAccess, imageJsonParser, (req, res) => {
+  const config = req.app.locals.securityConfig
+  return createVisionHandler({
+    provider: getSharedProvider(
+      config.geminiApiKey,
+      config.geminiModel,
+      config.geminiAttemptTimeoutMs,
+      req.app.locals.securityLogger
+    ),
+    providerFactory: model => getSharedProvider(
+      config.geminiApiKey,
+      model,
+      config.geminiAttemptTimeoutMs,
+      req.app.locals.securityLogger
+    ),
     allowModelOverride: true
   })(req, res)
 })
-router.post('/benchmark/text', authenticateToken, requireBenchmarkAccess, geminiLimiter, (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.includes('placeholder')) {
-    return res.status(500).json({ error: 'La API key de Gemini no esta configurada en el servidor backend.' })
-  }
-  return createTextBenchmarkHandler({ providerFactory: getSharedProvider })(req, res)
+router.post('/benchmark/text', requireBenchmarkAccess, (req, res) => {
+  const config = req.app.locals.securityConfig
+  return createTextBenchmarkHandler({
+    providerFactory: model => getSharedProvider(
+      config.geminiApiKey,
+      model,
+      config.geminiAttemptTimeoutMs,
+      req.app.locals.securityLogger
+    )
+  })(req, res)
 })
 
 router.testing = {

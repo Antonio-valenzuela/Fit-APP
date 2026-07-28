@@ -74,37 +74,82 @@ object TrainingCatalog {
         return exercises.filter { it.primaryMuscle == muscle || it.secondaryMuscles.contains(muscle) }
     }
 
-    fun routineForMuscle(muscle: String, preferredEquipment: String = "Gym"): SuggestedRoutine {
+    fun routineForMuscle(
+        muscle: String,
+        preferredEquipment: String = "Gym",
+        level: String? = null
+    ): SuggestedRoutine {
         val normalized = preferredEquipment.lowercase()
-        val matches = routines.filter { it.primaryMuscles.contains(muscle) }
-        val preferred = if (normalized == "casa" || normalized == "sin equipo") {
-            matches.firstOrNull { it.equipment.lowercase() == "casa" || it.equipment.lowercase() == "sin equipo" }
-        } else {
-            matches.firstOrNull { it.equipment.lowercase() == "gym" }
+        val matches = routines.filter {
+            it.primaryMuscles.contains(muscle) && matchesLevel(it, level)
         }
-        return preferred ?: matches.firstOrNull() ?: routines.first { it.id == "beginner_full_body" }
+        val preferred = when (normalized) {
+            "casa", "sin equipo" -> matches.firstOrNull {
+                it.equipment.lowercase() == "casa" || it.equipment.lowercase() == "sin equipo"
+            }
+            "ambos", "casa y gimnasio" -> matches.firstOrNull()
+            else -> matches.firstOrNull { it.equipment.lowercase() == "gym" }
+        }
+        return preferred
+            ?: matches.firstOrNull()
+            ?: routines.firstOrNull { it.id == "beginner_full_body" && matchesLevel(it, level) }
+            ?: routines.first { it.id == "beginner_full_body" }
     }
 
-    fun filteredRoutines(maxMinutes: Int, equipment: String, objective: String): List<SuggestedRoutine> {
+    fun filteredRoutines(
+        maxMinutes: Int,
+        equipment: String,
+        objective: String,
+        level: String? = null
+    ): List<SuggestedRoutine> {
         val normalizedEquipment = equipment.lowercase()
         val normalizedObjective = objective.lowercase()
+        fun matchesEquipment(routine: SuggestedRoutine): Boolean {
+            val routineEquipment = routine.equipment.lowercase()
+            if (normalizedEquipment == "ambos" || normalizedEquipment == "casa y gimnasio") return true
+            return routineEquipment.contains(normalizedEquipment) ||
+                (normalizedEquipment == "casa" && routineEquipment == "sin equipo")
+        }
         val exact = routines.filter { routine ->
             routine.estimatedMinutes <= maxMinutes &&
-                routine.equipment.lowercase().contains(normalizedEquipment) &&
+                matchesEquipment(routine) &&
+                matchesLevel(routine, level) &&
                 routine.focus.lowercase().contains(normalizedObjective)
         }
         if (exact.isNotEmpty()) return exact
 
         val relaxed = routines.filter { routine ->
             routine.estimatedMinutes <= maxMinutes &&
-                (routine.equipment.lowercase().contains(normalizedEquipment) ||
-                    normalizedEquipment == "casa" && routine.equipment == "Sin equipo")
+                matchesEquipment(routine) &&
+                matchesLevel(routine, level)
         }
         if (relaxed.isNotEmpty()) return relaxed
 
-        return routines.filter { it.estimatedMinutes <= maxMinutes }.ifEmpty {
-            routines.sortedBy { it.estimatedMinutes }.take(3)
+        val equipmentFallback = routines
+            .filter { matchesEquipment(it) && matchesLevel(it, level) }
+            .sortedBy { it.estimatedMinutes }
+            .take(3)
+        if (equipmentFallback.isNotEmpty()) return equipmentFallback
+
+        return routines.filter {
+            it.estimatedMinutes <= maxMinutes && matchesLevel(it, level)
+        }.ifEmpty {
+            routines.filter { matchesLevel(it, level) }.sortedBy { it.estimatedMinutes }.take(3)
         }
+    }
+
+    private fun matchesLevel(routine: SuggestedRoutine, selectedLevel: String?): Boolean {
+        if (selectedLevel.isNullOrBlank()) return true
+        val selectedRank = levelRank(selectedLevel) ?: return true
+        val routineRank = levelRank(routine.level) ?: return true
+        return routineRank <= selectedRank
+    }
+
+    private fun levelRank(level: String): Int? = when (level.trim().lowercase()) {
+        "principiante" -> 1
+        "intermedio" -> 2
+        "avanzado" -> 3
+        else -> null
     }
 }
 

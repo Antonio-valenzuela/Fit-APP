@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -214,6 +215,7 @@ private fun ActiveActivityTrackerScreen(
 
     Scaffold(
         containerColor = Color(0xFF07111F),
+        modifier = Modifier.testTag("active_activity_${discipline.name.lowercase()}_screen"),
         topBar = {
             TopAppBar(
                 title = { Text(title, fontWeight = FontWeight.Bold, color = Color.White) },
@@ -261,7 +263,12 @@ private fun ActiveActivityTrackerScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Icon(icon, contentDescription = null, tint = Color(0xFF7CFF4F), modifier = Modifier.size(26.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(trackerStatusLabel(trackerState.status), color = Color.White, fontWeight = FontWeight.Bold)
+                            Text(
+                                trackerStatusLabel(trackerState.status),
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.testTag("tracker_status_${trackerState.status.name.lowercase()}")
+                            )
                             Text(trackerState.message, color = Color.White.copy(alpha = 0.68f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -496,7 +503,7 @@ fun DailyPlanScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("daily_plan_screen").frostedMeshBackground(isDark),
         topBar = {
             TopAppBar(
                 title = { Text("Plan del día", fontWeight = FontWeight.Bold) },
@@ -633,7 +640,9 @@ private fun ActivityHistoryScreen(
     }
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(LocalThemeIsDark.current),
+        modifier = Modifier
+            .testTag("${discipline.name.lowercase()}_history_screen")
+            .frostedMeshBackground(LocalThemeIsDark.current),
         topBar = {
             TopAppBar(
                 title = { Text(title, fontWeight = FontWeight.Bold) },
@@ -682,7 +691,7 @@ fun ActivitySessionDetailScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(LocalThemeIsDark.current),
+        modifier = Modifier.testTag("activity_session_detail_screen").frostedMeshBackground(LocalThemeIsDark.current),
         topBar = {
             TopAppBar(
                 title = { Text("Detalle de sesión", fontWeight = FontWeight.Bold) },
@@ -1230,31 +1239,31 @@ private fun TrackerControls(
 ) {
     when {
         !hasPermission || status == TrackerStatus.NEEDS_PERMISSION -> {
-            Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onRequestPermission, modifier = Modifier.fillMaxWidth().testTag("tracker_permission_button")) {
                 Text("Permitir ubicación")
             }
         }
         status == TrackerStatus.READY -> {
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onStart, modifier = Modifier.fillMaxWidth().testTag("tracker_start_button")) {
                 Text(startLabel, fontWeight = FontWeight.Bold)
             }
         }
         status == TrackerStatus.TRACKING || status == TrackerStatus.SEARCHING_GPS -> {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onPause, modifier = Modifier.weight(1f)) { Text("Pausar") }
-                Button(onClick = onFinish, modifier = Modifier.weight(1f)) { Text("Finalizar") }
+                OutlinedButton(onClick = onPause, modifier = Modifier.weight(1f).testTag("tracker_pause_button")) { Text("Pausar") }
+                Button(onClick = onFinish, modifier = Modifier.weight(1f).testTag("tracker_finish_button")) { Text("Finalizar") }
             }
         }
         status == TrackerStatus.PAUSED -> {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onResume, modifier = Modifier.weight(1f)) { Text("Reanudar") }
-                Button(onClick = onFinish, modifier = Modifier.weight(1f)) { Text("Finalizar") }
+                OutlinedButton(onClick = onResume, modifier = Modifier.weight(1f).testTag("tracker_resume_button")) { Text("Reanudar") }
+                Button(onClick = onFinish, modifier = Modifier.weight(1f).testTag("tracker_finish_button")) { Text("Finalizar") }
             }
         }
         status == TrackerStatus.FINISHED -> {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) { Text("Descartar") }
-                Button(onClick = onSave, enabled = canSave, modifier = Modifier.weight(1f)) { Text("Guardar sesión") }
+                OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f).testTag("tracker_discard_button")) { Text("Descartar") }
+                Button(onClick = onSave, enabled = canSave, modifier = Modifier.weight(1f).testTag("tracker_save_button")) { Text("Guardar sesión") }
             }
             if (!canSave) {
                 Text(
@@ -1265,7 +1274,7 @@ private fun TrackerControls(
             }
         }
         status == TrackerStatus.ERROR -> {
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onStart, modifier = Modifier.fillMaxWidth().testTag("tracker_retry_button")) {
                 Text("Reintentar GPS")
             }
         }

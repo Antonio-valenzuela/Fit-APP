@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,7 +39,7 @@ fun ProgressScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.frostedMeshBackground(isDark),
+        modifier = Modifier.testTag("progress_screen").frostedMeshBackground(isDark),
         bottomBar = { FitPlanBottomBar(Destinations.PROGRESS, onNavigate, isPremium, discipline) }
     ) { innerPadding ->
         Column(
@@ -88,7 +89,7 @@ fun ProgressScreen(viewModel: FitPlanViewModel, onNavigate: (String) -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        Button(onClick = { onNavigate(Destinations.MUSCLE_MAP) }, modifier = Modifier.weight(1f)) {
+                        Button(onClick = { onNavigate(Destinations.MUSCLE_MAP) }, modifier = Modifier.weight(1f).testTag("open_muscle_map_button")) {
                             Text("Ver balance")
                         }
                         OutlinedButton(onClick = { onNavigate(Destinations.WORKOUT) }, modifier = Modifier.weight(1f)) {

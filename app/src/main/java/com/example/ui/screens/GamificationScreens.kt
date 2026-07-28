@@ -64,6 +64,7 @@ fun DailyCheckInScreen(
     val hasSelectedAction = waterSelected || foodSelected || workoutSelected || sleepSelected || weightSelected || energeticSelected
 
     Scaffold(
+        modifier = Modifier.testTag("daily_check_in_screen"),
         topBar = {
             TopAppBar(
                 title = { Text("Check-In Diario", fontWeight = FontWeight.SemiBold) },
@@ -231,6 +232,7 @@ fun DailyMissionsScreen(
     val context = LocalContext.current
 
     Scaffold(
+        modifier = Modifier.testTag("daily_missions_screen"),
         topBar = {
             TopAppBar(
                 title = { Text("Misiones de Hoy", fontWeight = FontWeight.SemiBold) },
@@ -397,6 +399,7 @@ fun AchievementsScreen(
     )
 
     Scaffold(
+        modifier = Modifier.testTag("achievements_screen"),
         topBar = {
             TopAppBar(
                 title = { Text("Insignias y Logros", fontWeight = FontWeight.SemiBold) },
