@@ -1,0 +1,7 @@
+# XcodeGen recreates this project on the macOS CI runner.
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+build/
+dist/
+*.ipa

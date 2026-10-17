@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "path": "ios",
+    "scheme": "MacroBar",
+    "configuration": "Debug",
+    "signing": false
+  }
+}
